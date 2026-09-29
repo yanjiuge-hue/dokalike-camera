@@ -186,10 +186,15 @@ void main() {
     });
 
     test('主体过偏（水平）：给水平方向提示', () {
+      // 修正：原来的 0.2×0.2 框面积只有 0.04，会先命中「主体过小」分支返回
+      // moveCloser。要测「过偏」必须先把面积抬进 [0.08, 0.65] 合法区间。
+      // 现取 0.30×0.40 = 0.12：未裁切、面积合法；中心 (0.20, 0.50)，
+      // dx = -0.30（|dx| > 0.22 安全区）而 dy = +0.08（在 ±0.28 内），
+      // 于是走水平分支 → moveRight。
       final ctx = EvalContext(
         input: resultOf(),
         meta: meta,
-        primarySubject: const Rect01(left: 0.05, top: 0.35, right: 0.25, bottom: 0.55),
+        primarySubject: const Rect01(left: 0.05, top: 0.30, right: 0.35, bottom: 0.70),
       );
       final out = rule.evaluate(ctx);
       expect(out.moveHint?.direction, anyOf(MoveDirection.moveRight, MoveDirection.moveLeft));
@@ -227,14 +232,20 @@ void main() {
   group('ThirdsRule', () {
     final rule = ThirdsRule();
 
-    test('永远输出 8 条三分线', () {
+    test('永远输出 4 条三分线', () {
+      // 修正：AppConstants.thirdsPositions 只有 [1/3, 2/3] 两个位置，
+      // 规则按「先竖后横」各生成 2 条 → 共 4 条，不是 8 条。
+      // 8 条是「三分 4 + 黄金 4」在 CompositionEngine 聚合后的总数。
       final ctx = EvalContext(
         input: resultOf(), meta: meta,
         primarySubject: const Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7),
       );
       final out = rule.evaluate(ctx);
-      expect(out.lines.length, 8);
+      expect(out.lines.length, 4);
       expect(out.lines.every((l) => l.type == GuideLineType.thirds), isTrue);
+      // 2 竖 + 2 横，顺序与源码一致
+      expect(out.lines.where((l) => l.axis == LineAxis.vertical).length, 2);
+      expect(out.lines.where((l) => l.axis == LineAxis.horizontal).length, 2);
     });
 
     test('主体中心在三分交点：高分', () {
@@ -270,14 +281,18 @@ void main() {
     // 修正：GoldenRatioRule 无 const 构造函数，不能用 const 声明（同上）。
     final rule = GoldenRatioRule();
 
-    test('永远输出 8 条黄金线', () {
+    test('永远输出 4 条黄金线', () {
+      // 修正：与三分法同构，AppConstants.goldenPositions = [0.382, 0.618]
+      // 两个位置 → 2 竖 + 2 横 = 4 条。
       final ctx = EvalContext(
         input: resultOf(), meta: meta,
         primarySubject: const Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7),
       );
       final out = rule.evaluate(ctx);
-      expect(out.lines.length, 8);
+      expect(out.lines.length, 4);
       expect(out.lines.every((l) => l.type == GuideLineType.golden), isTrue);
+      expect(out.lines.where((l) => l.axis == LineAxis.vertical).length, 2);
+      expect(out.lines.where((l) => l.axis == LineAxis.horizontal).length, 2);
     });
 
     test('主体中心在黄金交点（0.382, 0.382）：高分', () {

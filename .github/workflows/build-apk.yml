@@ -146,6 +146,29 @@ jobs:
             echo "  未发现 test/widget_test.dart，无需清理"
           fi
 
+          echo ">>> 升级 Kotlin Gradle 插件版本（1.7.10 → 1.8.22）"
+          # 背景：Flutter 3.24 模板生成的 settings.gradle 固定 Kotlin 1.7.10，
+          # 而 camera / mlkit 等插件引入的 androidx 库（lifecycle 2.7.0、
+          # core-ktx 1.13.1、fragment 1.7.1 等）是用 Kotlin 1.8 编译的，
+          # 其 .kotlin_module 元数据版本为 1.8.0。Kotlin 1.7.x 的编译器
+          # 读不了 1.8.0 元数据，编译期报：
+          #   "Module was compiled with an incompatible version of Kotlin.
+          #    The binary version of its metadata is 1.8.0, expected version is 1.6.0"
+          # 这是 Flutter 官方已知问题（flutter 工具在构建失败时也会提示
+          # 「Your project requires a newer version of the Kotlin Gradle plugin」）。
+          # 升到 1.8.22 即可读取 1.8/1.9 元数据；AGP 与 Gradle 版本不动
+          # （上一轮构建已验证 AGP 7.3.0 + Gradle 7.6.3 能通过配置期与原生编译）。
+          sed -i \
+            's/id "org.jetbrains.kotlin.android" version "1.7.10"/id "org.jetbrains.kotlin.android" version "1.8.22"/' \
+            android/settings.gradle
+          echo "  升级后的 Kotlin 插件声明："
+          grep -n "org.jetbrains.kotlin.android" android/settings.gradle | sed 's/^/    /'
+          # 幂等校验：确认替换真的生效（模板版本若变化导致没命中，构建停下来暴露问题）
+          if ! grep -q 'org.jetbrains.kotlin.android" version "1.8.22"' android/settings.gradle; then
+            echo "  !! Kotlin 版本替换未生效（模板 Kotlin 声明可能已变化），请检查"
+            exit 1
+          fi
+
           echo ">>> 留存模板产物，便于核对 AGP / Kotlin 版本"
           cp android/settings.gradle      "${LOG_DIR}/03-template-settings.gradle"
           cp android/app/build.gradle     "${LOG_DIR}/04-template-app-build.gradle"

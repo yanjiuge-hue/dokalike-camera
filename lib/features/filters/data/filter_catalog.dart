@@ -15,11 +15,21 @@ import '../../../models/filter_preset.dart';
 ///
 /// 新增滤镜只需：① 在 [all] 中追加预设；② 可选地在 assets/luts/ 放置
 /// 同名 LUT PNG（共享知识 #2）。
+///
+/// ⚠️ 为什么本目录的预设必须用 `static final` 而不是 `static const`：
+/// [FilterPreset] 的构造函数带 `assert(matrix4x5.length == 20, ...)`。
+/// 常量上下文（`static const`）要求 CFE 在**编译期**求值整个构造，
+/// 而 Dart 的常量表达式不允许对 List 做 `.length` 属性访问，于是报
+/// "Constant evaluation error ... The property 'length' can't be accessed
+/// on '<double>[...]' in a constant expression"。
+/// 改为 `static final` 后构造退化为**首次访问时**的运行期调用：
+/// - `FilterPreset` 的 const 构造函数与 assert 本身保持不动；
+/// - assert 变回运行期断言（debug 模式生效），20 元素校验能力完整保留。
 class FilterCatalog {
   FilterCatalog._();
 
   /// 原图（恒等矩阵直出）
-  static const FilterPreset original = FilterPreset(
+  static final FilterPreset original = FilterPreset(
     id: 'original',
     name: '原图',
     matrix4x5: [
@@ -33,7 +43,7 @@ class FilterCatalog {
   );
 
   /// 晨雾：青调晨光，轻柔对比，微降饱和
-  static const FilterPreset tealDawn = FilterPreset(
+  static final FilterPreset tealDawn = FilterPreset(
     id: 'teal_dawn',
     name: '晨雾',
     matrix4x5: [
@@ -47,7 +57,7 @@ class FilterCatalog {
   );
 
   /// 街拍 200：高对比、去饱和、街头纪实感
-  static const FilterPreset street200 = FilterPreset(
+  static final FilterPreset street200 = FilterPreset(
     id: 'street_200',
     name: '街拍 200',
     matrix4x5: [
@@ -61,7 +71,7 @@ class FilterCatalog {
   );
 
   /// 暖阳：金暖色温，适合顺光人像与日常
-  static const FilterPreset warmSun = FilterPreset(
+  static final FilterPreset warmSun = FilterPreset(
     id: 'warm_sun',
     name: '暖阳',
     matrix4x5: [
@@ -75,7 +85,7 @@ class FilterCatalog {
   );
 
   /// 夜港：深青夜色，压暗提纯，夜景专属
-  static const FilterPreset nightPort = FilterPreset(
+  static final FilterPreset nightPort = FilterPreset(
     id: 'night_port',
     name: '夜港',
     matrix4x5: [
@@ -89,7 +99,7 @@ class FilterCatalog {
   );
 
   /// 柔调：低反差柔肤，人像直出
-  static const FilterPreset agfaSoft = FilterPreset(
+  static final FilterPreset agfaSoft = FilterPreset(
     id: 'agfa_soft',
     name: '柔调',
     matrix4x5: [
@@ -103,7 +113,7 @@ class FilterCatalog {
   );
 
   /// 青野：绿意通透，户外风光
-  static const FilterPreset fujiGreen = FilterPreset(
+  static final FilterPreset fujiGreen = FilterPreset(
     id: 'fuji_green',
     name: '青野',
     matrix4x5: [
@@ -117,7 +127,7 @@ class FilterCatalog {
   );
 
   /// 金岸：金饱和暖调，经典负片质感
-  static const FilterPreset kodakGold = FilterPreset(
+  static final FilterPreset kodakGold = FilterPreset(
     id: 'kodak_gold',
     name: '金岸',
     matrix4x5: [
@@ -131,7 +141,7 @@ class FilterCatalog {
   );
 
   /// 墨影：黑白高反差，微暖黑
-  static const FilterPreset monoFilm = FilterPreset(
+  static final FilterPreset monoFilm = FilterPreset(
     id: 'mono_film',
     name: '墨影',
     matrix4x5: [
@@ -145,7 +155,10 @@ class FilterCatalog {
   );
 
   /// 全部滤镜（顺序即滤镜栏展示顺序）
-  static const List<FilterPreset> all = [
+  // 与上面 9 个预设同理：列表元素是 FilterPreset，若声明为 const，
+  // CFE 会尝试对整个列表做常量求值，进而触发 FilterPreset 构造函数里
+  // assert(matrix4x5.length == 20) 的编译期求值失败。
+  static final List<FilterPreset> all = [
     original,
     tealDawn,
     street200,
