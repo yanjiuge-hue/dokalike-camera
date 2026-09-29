@@ -10,6 +10,8 @@ on:
 env:
   FLUTTER_VERSION: '3.24.0'   # pubspec 要求 sdk>=3.3.0；3.24 稳定且兼容
   JAVA_VERSION: '17'           # build.gradle 要求 VERSION_17
+  ORG: 'com.dokalike'
+  PROJECT: 'dokalike_camera'
 
 jobs:
   build-apk:
@@ -36,10 +38,58 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # 4) 补齐 flutter create 生成的平台脚手架（MainActivity / Gradle wrapper / res 等）
-      #    已有文件（lib/ pubspec.yaml android/app/build.gradle 等）不会被覆盖。
-      - name: 补齐 Flutter 工程脚手架
-        run: flutter create --org com.dokalike --project-name dokalike_camera .
+      # 4) ★关键★ 重建完整平台脚手架
+      #
+      # 背景：本仓库只提交了「自定义过的」平台配置（build.gradle /
+      # AndroidManifest / proguard-rules / Podfile / Info.plist），
+      # 未提交 flutter create 生成的脚手架（MainActivity.kt、Gradle wrapper、
+      # settings.gradle、res 资源、xcodeproj 等）。
+      #
+      # 问题：flutter create 一旦检测到 android/ 目录已存在，就认为该平台
+      # 「已配置」而**跳过整个 Android 模板拷贝**，导致上述脚手架永远缺失
+      # → Gradle 找不到 settings.gradle / MainActivity → 构建失败。
+      #
+      # 解法：备份自定义配置 → 删除 android/ ios/ → 让 flutter create
+      # 完整生成脚手架 → 再把自定义配置拷回去覆盖。
+      - name: 重建平台脚手架
+        run: |
+          set -e
+          echo ">>> 备份自定义平台配置"
+          mkdir -p /tmp/custom/android/app/src/main /tmp/custom/android/app/src/debug /tmp/custom/ios/Runner
+          cp android/app/build.gradle                   /tmp/custom/android/app/build.gradle
+          cp android/app/proguard-rules.pro             /tmp/custom/android/app/proguard-rules.pro
+          cp android/app/src/main/AndroidManifest.xml   /tmp/custom/android/app/src/main/AndroidManifest.xml
+          cp android/app/src/debug/AndroidManifest.xml  /tmp/custom/android/app/src/debug/AndroidManifest.xml
+          cp ios/Podfile                                /tmp/custom/ios/Podfile
+          cp ios/Runner/Info.plist                      /tmp/custom/ios/Runner/Info.plist
+
+          echo ">>> 删除不完整的平台目录（让 flutter create 完整生成）"
+          rm -rf android ios
+
+          echo ">>> 生成完整脚手架"
+          flutter create \
+            --org "${ORG}" \
+            --project-name "${PROJECT}" \
+            --android-language kotlin \
+            --ios-language swift \
+            --platforms android,ios \
+            .
+
+          echo ">>> 拷回自定义配置"
+          cp /tmp/custom/android/app/build.gradle                   android/app/build.gradle
+          cp /tmp/custom/android/app/proguard-rules.pro             android/app/proguard-rules.pro
+          cp /tmp/custom/android/app/src/main/AndroidManifest.xml   android/app/src/main/AndroidManifest.xml
+          cp /tmp/custom/android/app/src/debug/AndroidManifest.xml  android/app/src/debug/AndroidManifest.xml
+          cp /tmp/custom/ios/Podfile                                ios/Podfile
+          cp /tmp/custom/ios/Runner/Info.plist                      ios/Runner/Info.plist
+
+          echo ">>> 校验关键文件是否齐全"
+          for f in android/settings.gradle android/gradle.properties \
+                   android/gradlew android/gradle/wrapper/gradle-wrapper.jar \
+                   android/app/src/main/kotlin/com/dokalike/dokalike_camera/MainActivity.kt \
+                   android/app/src/main/res/values/styles.xml ; do
+            if [ -f "$f" ]; then echo "  OK   $f"; else echo "  MISS $f"; exit 1; fi
+          done
 
       # 5) 拉取 Dart 依赖
       - name: 拉取依赖
@@ -56,6 +106,16 @@ jobs:
       # 8) 构建 Release APK（split-per-abi 已在 build.gradle 开启，会产出 3 个 APK）
       - name: 构建 Release APK
         run: flutter build apk --release
+
+      # 8.5) 无论成败都保留构建目录，便于排查失败原因
+      - name: 上传构建目录（调试用）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-debug-outputs
+          path: build/app/outputs/
+          retention-days: 7
+          if-no-files-found: ignore
 
       # 9) 上传所有 APK 作为构建产物
       - name: 上传 APK
