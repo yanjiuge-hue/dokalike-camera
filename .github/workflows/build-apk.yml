@@ -302,6 +302,40 @@ jobs:
             done
 
             echo ""
+            echo "===== 插件自带 Kotlin 版本对齐（1.6.x / 1.7.x → 1.8.22） ====="
+            # sensors_plus / share_plus 在自己的 buildscript 里写死了旧 Kotlin：
+            #   ext.kotlin_version = '1.7.22'
+            #   classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+            # 于是这两个插件子工程用的是 Kotlin 1.7.x 编译器，而它们依赖的
+            # androidx（core-ktx 1.13.1、fragment 1.7.1、lifecycle 2.7.0、
+            # activity 1.8.1…）都是 Kotlin 1.8 编译的，元数据版本 1.8.0 高于
+            # 1.7.x 能读的 1.6.0，编译期刷屏报错：
+            #   "Module was compiled with an incompatible version of Kotlin.
+            #    The binary version of its metadata is 1.8.0,
+            #    expected version is 1.6.0"
+            # 与主工程（已升到 1.8.22）对齐即可消除。classpath 里解析到的
+            # kotlin-stdlib 本来就已经是 1.8.22，所以这里改的是编译器版本。
+            kt_patched=0
+            for gradle in "${PUB_CACHE_DIR}"/*/android/build.gradle; do
+              if [ ! -f "$gradle" ]; then continue; fi
+              before=$(grep -n -E "ext\.kotlin_version[[:space:]]*=[[:space:]]*['\"]1\.[67]\.[0-9]+['\"]" \
+                "$gradle" 2>/dev/null || true)
+              if [ -z "$before" ]; then continue; fi
+              echo "[Kotlin 对齐] $gradle"
+              printf '%s\n' "$before" | sed 's/^/    替换前: /'
+              sed -i -E "s/ext\.kotlin_version[[:space:]]*=[[:space:]]*['\"]1\.[67]\.[0-9]+['\"]/ext.kotlin_version = '1.8.22'/g" \
+                "$gradle"
+              if [ $? -ne 0 ]; then
+                echo "  !! Kotlin 版本 sed 执行失败：$gradle"
+                return 1
+              fi
+              after=$(grep -n -E "ext\.kotlin_version" "$gradle" 2>/dev/null || true)
+              printf '%s\n' "$after" | sed 's/^/    替换后: /'
+              kt_patched=$((kt_patched + 1))
+            done
+            echo "对齐 Kotlin 版本的插件数 : ${kt_patched}"
+
+            echo ""
             echo "===== 校验：是否还有未修补的旧写法 ====="
             remain=$(grep -rn -E "flutter\.compileSdkVersion|compileSdkVersion[[:space:]]+31([[:space:]]|$)" \
               ${PUB_CACHE_DIR}/*/android/build.gradle 2>/dev/null || true)
@@ -311,6 +345,15 @@ jobs:
               return 1
             fi
             echo "OK：已无 flutter.compileSdkVersion / compileSdkVersion 31"
+
+            kt_remain=$(grep -rn -E "ext\.kotlin_version[[:space:]]*=[[:space:]]*['\"]1\.[67]\.[0-9]+['\"]" \
+              ${PUB_CACHE_DIR}/*/android/build.gradle 2>/dev/null || true)
+            if [ -n "$kt_remain" ]; then
+              echo "!! 仍存在旧的 ext.kotlin_version："
+              printf '%s\n' "$kt_remain"
+              return 1
+            fi
+            echo "OK：插件 ext.kotlin_version 已全部对齐 1.8.22"
             return 0
           }
 

@@ -21,6 +21,17 @@ android {
     // ⚠️ 注意：targetSdk 仍保持 34 不变——升到 35 会触发 Android 15 强制
     // edge-to-edge（内容延伸到状态栏/导航栏下方），现有 UI 尚未适配，先不动。
     compileSdk 35
+    // ⚠️ 必须显式指定 buildToolsVersion，否则 AGP 7.3.0 会取它的默认值
+    // 30.0.3（2020 年的 aapt2），而这个老 aapt2 解析不了 android-35 的
+    // resources.arsc，:app:processReleaseResources 会直接崩：
+    //   aapt2 E ... LoadedArsc.cpp:94] RES_TABLE_TYPE_TYPE entry offsets
+    //               overlap actual entry data.
+    //   aapt2 E ... ApkAssets.cpp:149] Failed to load resources table in APK
+    //               '.../platforms/android-35/android.jar'.
+    //   error: failed to load include path .../platforms/android-35/android.jar
+    // 表现上很像「android-35 平台的 jar 坏了」，其实是 aapt2 太旧。runner 上
+    // 已预装 35.0.0 / 35.0.1，钉 35.0.0 与 compileSdk 35 同源，一步到位。
+    buildToolsVersion "35.0.0"
     ndkVersion flutter.ndkVersion
 
     compileOptions {
