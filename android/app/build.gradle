@@ -33,10 +33,10 @@ android {
         versionCode 1
         versionName "1.0.0"
         multiDexEnabled true
-        // tflite_flutter 的 libtensorflowlite_c.so 按以下 ABI 分发
-        ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
-        }
+        // ⚠️ 不要在这里写 ndk { abiFilters ... }。
+        // AGP 禁止 ndk.abiFilters 与 splits.abi 声明相同的 ABI，否则报：
+        //   "Configuration conflict: ABI '...' in ndk abi cannot appear in ABI splits"
+        // 下面的 splits.abi 本身就会完成 ABI 过滤与分包，无需重复声明。
     }
 
     // 模型资源不压缩：tflite 需要直接内存映射加载
@@ -55,7 +55,8 @@ android {
         pickFirst 'assets/**/*.tflite'
     }
 
-    // 按 ABI 拆分以控制单包体积（Release）
+    // 按 ABI 拆分以控制单包体积（Release）。
+    // 这里同时承担 ABI 过滤职责，故 defaultConfig 中不再写 ndk.abiFilters。
     splits {
         abi {
             enable true
