@@ -1,0 +1,43 @@
+# Flutter / Dart 标准忽略
+# 参考：https://github.com/flutter/flutter/blob/master/.gitignore
+
+# 构建产物
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+
+# Flutter SDK 自动生成（不应入库，CI 会用 flutter create 补齐）
+**/android/gradle-wrapper.jar
+**/android/local.properties
+**/ios/Pods/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Runner/GeneratedPluginRegistrant.*
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+
+# 临时文件
+*.log
+*.tmp
+coverage/
+
+# 密钥（正式签名用，勿入库）
+*.keystore
+*.jks
+key.properties
+
+# 平台缓存
+**/android/.gradle/
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/ios/Flutter/App.framework
+**/ios/Flutter/Runner.framework

@@ -1,0 +1,80 @@
+// DokaLike Camera Android 应用级构建脚本
+// 关键约定：
+//  1. minSdk 23（tflite_flutter FFI 库要求）
+//  2. aaptOptions noCompress "tflite"（模型文件不可压缩，否则无法 mmap 加载）
+//  3. split-per-abi 控制单包体积（P0-11：包体积 ≤150MB）
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    // namespace 与 applicationId 对齐 flutter create --org com.dokalike 生成的
+    // MainActivity 包路径（com/dokalike/dokalike_camera），避免 CI 构建时
+    // 找不到 MainActivity。显示名仍由 AndroidManifest.label 控制。
+    namespace "com.dokalike.dokalike_camera"
+    compileSdk 34
+    ndkVersion flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    defaultConfig {
+        applicationId "com.dokalike.dokalike_camera"
+        minSdk 23
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+        multiDexEnabled true
+        // tflite_flutter 的 libtensorflowlite_c.so 按以下 ABI 分发
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+        }
+    }
+
+    // 模型资源不压缩：tflite 需要直接内存映射加载
+    aaptOptions {
+        noCompress "tflite"
+    }
+
+    // 按 ABI 拆分以控制单包体积（Release）
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            universalApk false
+        }
+    }
+
+    signingConfigs {
+        // 模板阶段使用 debug 签名；正式发布请替换为自有 keystore
+        debug {
+            storeFile file(System.getenv('ANDROID_KEYSTORE_PATH') ?: 'debug.keystore')
+            keyAlias System.getenv('ANDROID_KEY_ALIAS') ?: 'androiddebugkey'
+            storePassword System.getenv('ANDROID_STORE_PASSWORD') ?: 'android'
+            keyPassword System.getenv('ANDROID_KEY_PASSWORD') ?: 'android'
+        }
+    }
+
+    buildTypes {
+        release {
+            // R8 压缩 + 资源收缩（P0-11 包体积红线）
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}

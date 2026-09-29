@@ -1,0 +1,23 @@
+# DokaLike Camera 静态分析配置
+# 纯逻辑守护说明：
+#   core/utils/、features/*/engine/、models/ 下的文件禁止 import
+#   package:flutter/*、package:camera/*、dart:io（models 例外仅允许 dart:typed_data）。
+#   由于 flutter_lints 无法直接自定义"禁止 import"规则，
+#   该约束由 test/pure_logic_guard_test.dart 以单元测试形式强制执行（CI 必跑）。
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - 'android/**'
+    - 'ios/**'
+  errors:
+    invalid_annotation_target: ignore
+
+linter:
+  rules:
+    prefer_single_quotes: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_final_locals: true
+    prefer_final_in_for_each: true
+    avoid_print: true
