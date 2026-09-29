@@ -44,6 +44,17 @@ android {
         noCompress "tflite"
     }
 
+    // tflite_flutter 与 ML Kit 都会携带 libc++_shared.so，
+    // 不指定 pickFirst 会在 mergeReleaseNativeLibs 阶段报
+    // "2 files found with path 'lib/*/libc++_shared.so'" 而构建失败。
+    packagingOptions {
+        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
+        pickFirst 'lib/arm64-v8a/libc++_shared.so'
+        pickFirst 'lib/x86_64/libc++_shared.so'
+        // tflite 模型随 assets 打包，避免与插件自带的模型文件冲突
+        pickFirst 'assets/**/*.tflite'
+    }
+
     // 按 ABI 拆分以控制单包体积（Release）
     splits {
         abi {
