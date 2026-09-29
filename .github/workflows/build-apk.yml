@@ -7,11 +7,16 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+# 需要写权限：构建日志会被推送到独立的 ci-logs 分支，便于远程排错
+permissions:
+  contents: write
+
 env:
   FLUTTER_VERSION: '3.24.0'   # pubspec 要求 sdk>=3.3.0；3.24 稳定且兼容
   JAVA_VERSION: '17'           # build.gradle 要求 VERSION_17
   ORG: 'com.dokalike'
   PROJECT: 'dokalike_camera'
+  LOG_DIR: 'ci-logs'
 
 jobs:
   build-apk:
@@ -23,14 +28,41 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      # 2) 安装 JDK 17（Gradle 8 + Android Gradle Plugin 8 要求）
+      # 2) 环境诊断：把 Java / Android SDK / Gradle 环境写进日志，
+      #    方便远程定位「SDK 版本缺失」「AGP 版本不匹配」一类问题。
+      - name: 环境诊断
+        run: |
+          mkdir -p "${LOG_DIR}"
+          {
+            echo "===== RUN INFO ====="
+            echo "repository : ${GITHUB_REPOSITORY}"
+            echo "run_id     : ${GITHUB_RUN_ID}"
+            echo "attempt    : ${GITHUB_RUN_ATTEMPT}"
+            echo "commit     : ${GITHUB_SHA}"
+            echo "ref        : ${GITHUB_REF}"
+            echo "===== JAVA ====="
+            java -version 2>&1 || true
+            echo "===== ANDROID SDK ====="
+            echo "ANDROID_HOME     = $ANDROID_HOME"
+            echo "ANDROID_SDK_ROOT = $ANDROID_SDK_ROOT"
+            SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+            echo "SDK dir          = $SDK"
+            echo "-- installed platforms --"
+            ls -1 "$SDK/platforms" 2>/dev/null || echo "(platforms 目录不存在)"
+            echo "-- installed build-tools --"
+            ls -1 "$SDK/build-tools" 2>/dev/null || echo "(build-tools 目录不存在)"
+            echo "===== 磁盘空间 ====="
+            df -h / | tail -n 1 || true
+          } 2>&1 | tee "${LOG_DIR}/01-env.log"
+
+      # 3) 安装 JDK 17（Gradle 8 + Android Gradle Plugin 8 要求）
       - name: 配置 Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
 
-      # 3) 安装 Flutter SDK
+      # 4) 安装 Flutter SDK
       - name: 配置 Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -38,7 +70,30 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # 4) ★关键★ 重建完整平台脚手架
+      # 4.5) 补齐可能缺失的 Android SDK 平台。
+      #      部分插件（如 google_mlkit_face_detection）声明了 compileSdk 35，
+      #      若 runner 上没装对应的 SDK Platform，Gradle 配置阶段会直接失败。
+      - name: 补齐 Android SDK 平台
+        continue-on-error: true
+        run: |
+          mkdir -p "${LOG_DIR}"
+          {
+            SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+            echo "SDK dir = $SDK"
+            if command -v sdkmanager >/dev/null 2>&1; then
+              yes 2>/dev/null | sdkmanager --licenses >/dev/null 2>&1 || true
+              yes 2>/dev/null | sdkmanager --install "platforms;android-34" "build-tools;34.0.0" || true
+              yes 2>/dev/null | sdkmanager --install "platforms;android-35" "build-tools;35.0.0" || true
+            else
+              echo "sdkmanager 不在 PATH 中，跳过"
+            fi
+            echo "-- 补齐后的 platforms --"
+            ls -1 "$SDK/platforms" 2>/dev/null || true
+            echo "-- 补齐后的 build-tools --"
+            ls -1 "$SDK/build-tools" 2>/dev/null || true
+          } 2>&1 | tee "${LOG_DIR}/02-sdk.log"
+
+      # 5) ★关键★ 重建完整平台脚手架
       #
       # 背景：本仓库只提交了「自定义过的」平台配置（build.gradle /
       # AndroidManifest / proguard-rules / Podfile / Info.plist），
@@ -54,6 +109,7 @@ jobs:
       - name: 重建平台脚手架
         run: |
           set -e
+          mkdir -p "${LOG_DIR}"
           echo ">>> 备份自定义平台配置"
           mkdir -p /tmp/custom/android/app/src/main /tmp/custom/android/app/src/debug /tmp/custom/ios/Runner
           cp android/app/build.gradle                   /tmp/custom/android/app/build.gradle
@@ -75,6 +131,14 @@ jobs:
             --platforms android,ios \
             .
 
+          echo ">>> 留存模板产物，便于核对 AGP / Kotlin 版本"
+          cp android/settings.gradle      "${LOG_DIR}/03-template-settings.gradle"
+          cp android/app/build.gradle     "${LOG_DIR}/04-template-app-build.gradle"
+          cp android/gradle.properties    "${LOG_DIR}/05-template-gradle.properties"
+          cp android/gradle/wrapper/gradle-wrapper.properties "${LOG_DIR}/06-gradle-wrapper.properties"
+          echo ">>> 模板 app/build.gradle 内容："
+          cat android/app/build.gradle
+
           echo ">>> 拷回自定义配置"
           cp /tmp/custom/android/app/build.gradle                   android/app/build.gradle
           cp /tmp/custom/android/app/proguard-rules.pro             android/app/proguard-rules.pro
@@ -90,27 +154,75 @@ jobs:
                    android/app/src/main/res/values/styles.xml ; do
             if [ -f "$f" ]; then echo "  OK   $f"; else echo "  MISS $f"; exit 1; fi
           done
+          echo ">>> android/ 目录树（前两层）"
+          find android -maxdepth 2 -not -path '*/.git*' | sort | head -n 60
 
-      # 5) 拉取 Dart 依赖
+      # 6) Flutter 环境自检
+      - name: Flutter 环境自检
+        continue-on-error: true
+        run: |
+          mkdir -p "${LOG_DIR}"
+          flutter doctor -v 2>&1 | tee "${LOG_DIR}/07-flutter-doctor.log" || true
+
+      # 7) 拉取 Dart 依赖
       - name: 拉取依赖
-        run: flutter pub get
+        id: pub_get
+        continue-on-error: true
+        run: |
+          mkdir -p "${LOG_DIR}"
+          flutter pub get 2>&1 | tee "${LOG_DIR}/08-pub-get.log"
 
-      # 6) 静态分析（不阻塞构建，仅报告）
+      # 8) 静态分析（不阻塞构建，仅报告）
       - name: 静态分析（不阻塞）
-        run: flutter analyze || true
+        continue-on-error: true
+        run: |
+          mkdir -p "${LOG_DIR}"
+          flutter analyze 2>&1 | tee "${LOG_DIR}/09-analyze.log" || true
 
-      # 7) 运行单元测试（不阻塞 release 产出，失败仅告警）
+      # 9) 运行单元测试（不阻塞 release 产出，失败仅告警）
       - name: 单元测试（不阻塞）
-        run: flutter test || true
+        continue-on-error: true
+        run: |
+          mkdir -p "${LOG_DIR}"
+          flutter test 2>&1 | tee "${LOG_DIR}/10-test.log" || true
 
-      # 8) 构建 Release APK。
-      #    --split-per-abi 由 Flutter 插件自动完成 ABI 过滤与分包，产出 3 个 APK。
-      #    注意：不要在 gradle 里手写 splits.abi，否则与插件注入的
-      #    ndk.abiFilters 冲突（"Configuration conflict: ABI ..."）导致构建失败。
+      # 10) 构建 Release APK。
+      #     --split-per-abi 由 Flutter 插件自动完成 ABI 过滤与分包，产出 3 个 APK。
+      #     注意：不要在 gradle 里手写 splits.abi，否则与插件注入的
+      #     ndk.abiFilters 冲突（"Configuration conflict: ABI ..."）导致构建失败。
       - name: 构建 Release APK
-        run: flutter build apk --release --split-per-abi
+        id: build_apk
+        continue-on-error: true
+        run: |
+          mkdir -p "${LOG_DIR}"
+          flutter build apk --release --split-per-abi 2>&1 | tee "${LOG_DIR}/11-build-apk.log"
+          code=${PIPESTATUS[0]}
+          echo "BUILD_EXIT_CODE=${code}"
+          exit $code
 
-      # 8.5) 无论成败都保留构建目录，便于排查失败原因
+      # 10.5) 失败时打印 Gradle 报错摘要，写进日志便于远程查看
+      - name: 提取 Gradle 报错摘要
+        if: always()
+        continue-on-error: true
+        run: |
+          {
+            echo "===== 构建步骤结果 ====="
+            echo "pub_get   = ${{ steps.pub_get.outcome }}"
+            echo "build_apk = ${{ steps.build_apk.outcome }}"
+            echo ""
+            echo "===== 11-build-apk.log 中的 Gradle 错误片段 ====="
+            if [ -f "${LOG_DIR}/11-build-apk.log" ]; then
+              grep -n -E "FAILURE:|What went wrong|Execution failed for task|Caused by|Could not determine|error:|Exception|已中止|失败" \
+                "${LOG_DIR}/11-build-apk.log" || echo "(未匹配到常见错误关键字)"
+              echo ""
+              echo "===== build-apk.log 最后 80 行 ====="
+              tail -n 80 "${LOG_DIR}/11-build-apk.log"
+            else
+              echo "(没有 11-build-apk.log，构建步骤未执行)"
+            fi
+          } 2>&1 | tee "${LOG_DIR}/12-error-summary.log" || true
+
+      # 11) 无论成败都保留构建产物，便于排查失败原因
       - name: 上传构建目录（调试用）
         if: always()
         uses: actions/upload-artifact@v4
@@ -120,7 +232,56 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-      # 9) 上传所有 APK 作为构建产物
+      # 11.5) ★ 把全部日志推送到独立的 ci-logs 分支 ★
+      #       GitHub 的 Logs API 要求 admin 权限，匿名/CI 之外的手段读不到；
+      #       推到一个孤儿分支后，日志公开可读，排错不再来回截图。
+      - name: 导出日志到 ci-logs 分支
+        if: always()
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+        run: |
+          set -e
+          WORK=/tmp/ci-logs-push
+          rm -rf "$WORK"
+          mkdir -p "$WORK"
+          cp "${LOG_DIR}"/*.log "$WORK/" 2>/dev/null || true
+          cp "${LOG_DIR}"/*.gradle "$WORK/" 2>/dev/null || true
+          cp "${LOG_DIR}"/*.properties "$WORK/" 2>/dev/null || true
+          cd "$WORK"
+          echo "run_id: ${GITHUB_RUN_ID}" > run-info.txt
+          echo "attempt: ${GITHUB_RUN_ATTEMPT}" >> run-info.txt
+          echo "commit: ${GITHUB_SHA}" >> run-info.txt
+          echo "created_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> run-info.txt
+          git init -q -b ci-logs
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "ci: 构建日志 run ${GITHUB_RUN_ID}/attempt ${GITHUB_RUN_ATTEMPT}"
+          git push -q "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-logs --force
+          echo "日志已推送到 ci-logs 分支"
+
+      # 11.6) 日志同时作为 artifact 保留
+      - name: 上传 ci-logs 制品
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs
+          path: ci-logs/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # 11.9) 构建失败则让 job 明确失败
+      - name: 断言构建成功
+        if: always()
+        run: |
+          if [ "${{ steps.build_apk.outcome }}" = "failure" ] || [ "${{ steps.pub_get.outcome }}" = "failure" ]; then
+            echo "::error::构建失败，请查看 ci-logs 分支或 ci-logs 制品中的日志"
+            exit 1
+          fi
+          echo "构建成功"
+
+      # 12) 上传所有 APK 作为构建产物
       - name: 上传 APK
         uses: actions/upload-artifact@v4
         with:
@@ -129,7 +290,7 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      # 10) 输出构建摘要
+      # 13) 输出构建摘要
       - name: 构建摘要
         run: |
           echo "## DokaLike Camera APK 构建完成" >> $GITHUB_STEP_SUMMARY
