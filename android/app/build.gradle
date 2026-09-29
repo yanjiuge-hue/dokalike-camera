@@ -54,22 +54,22 @@ android {
         }
     }
 
-    signingConfigs {
-        // 模板阶段使用 debug 签名；正式发布请替换为自有 keystore
-        debug {
-            storeFile file(System.getenv('ANDROID_KEYSTORE_PATH') ?: 'debug.keystore')
-            keyAlias System.getenv('ANDROID_KEY_ALIAS') ?: 'androiddebugkey'
-            storePassword System.getenv('ANDROID_STORE_PASSWORD') ?: 'android'
-            keyPassword System.getenv('ANDROID_KEY_PASSWORD') ?: 'android'
-        }
-    }
+    // ⚠️ 不要自定义 signingConfigs.debug。
+    // Android Gradle Plugin 会自动创建 debug signingConfig 并指向
+    // ~/.android/debug.keystore（不存在时自动生成一个）。
+    // 此前这里写了 storeFile file('debug.keystore')，但仓库里并没有该文件，
+    // 导致 Gradle 在签名阶段直接失败（这是 CI 构建失败的第二个原因）。
+    // 正式发布签名请见 BUILD_GUIDE.md 第五节：新建 release signingConfig
+    // 并读取环境变量中的 keystore 路径与密码。
 
     buildTypes {
         release {
-            // R8 压缩 + 资源收缩（P0-11 包体积红线）
-            minifyEnabled true
-            shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // 先关闭 R8 / 资源收缩，确保能稳定产出可安装 APK。
+            // R8 在 tflite_flutter + ML Kit 场景容易因反射/FFI 符号被裁掉而失败，
+            // 待基础构建跑通后再单独开启并补充 proguard-rules.pro 验证。
+            minifyEnabled false
+            shrinkResources false
+            // release 默认使用 AGP 自动生成的 debug 签名，保证可安装可运行
             signingConfig signingConfigs.debug
         }
     }
