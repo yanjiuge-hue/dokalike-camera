@@ -66,7 +66,10 @@ class Rect01 extends Equatable {
   double get area {
     final w = (right.clamp(0, 1)) - (left.clamp(0, 1));
     final h = (bottom.clamp(0, 1)) - (top.clamp(0, 1));
-    return w <= 0 || h <= 0 ? 0 : w * h;
+    // 修正：clamp() 的静态返回类型是 num，w / h 参与运算后整体仍被推断为 num，
+    // 与 double 返回类型冲突（return_of_invalid_type）。这里显式 toDouble()，
+    // 并把整型字面量 0 写成 0.0，保证三元表达式两个分支类型一致。
+    return w <= 0 || h <= 0 ? 0.0 : (w * h).toDouble();
   }
 
   bool get isEmpty => width <= 0 || height <= 0;

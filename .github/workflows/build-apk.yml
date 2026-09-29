@@ -131,6 +131,21 @@ jobs:
             --platforms android,ios \
             .
 
+          echo ">>> 清理由 flutter create 重新生成的模板残留"
+          # flutter create 会补齐所有「模板里有、仓库里没有」的文件，其中就包括
+          # 模板自带的 test/widget_test.dart —— 它引用模板计数器 App 的 MyApp
+          # 组件，本项目里根本不存在，于是 analyze 报 creation_with_non_type、
+          # flutter test 报 Failed to load，白白占用报错面板、掩盖真实问题。
+          # 本项目有自己的 test/ 套件，这个文件没有任何价值，直接删掉。
+          # （本地仓库并未跟踪该文件，所以只能在这里删；删了以后下次构建
+          #   flutter create 还会再生成，因此每次都删。）
+          if [ -f test/widget_test.dart ]; then
+            grep -n "MyApp" test/widget_test.dart >/dev/null 2>&1 && echo "  删除模板残留 test/widget_test.dart（引用了 MyApp）" || echo "  删除 test/widget_test.dart"
+            rm -f test/widget_test.dart
+          else
+            echo "  未发现 test/widget_test.dart，无需清理"
+          fi
+
           echo ">>> 留存模板产物，便于核对 AGP / Kotlin 版本"
           cp android/settings.gradle      "${LOG_DIR}/03-template-settings.gradle"
           cp android/app/build.gradle     "${LOG_DIR}/04-template-app-build.gradle"
@@ -171,6 +186,117 @@ jobs:
         run: |
           mkdir -p "${LOG_DIR}"
           flutter pub get 2>&1 | tee "${LOG_DIR}/08-pub-get.log"
+
+      # 7.5) ★修补不兼容插件★
+      #
+      # 背景：pub-cache 里部分插件的 android/build.gradle 仍是旧式写法，
+      # 在 Flutter 3.24 的新版 Android Gradle Plugin 体系下会在 **Gradle 配置期**
+      # 直接崩溃，而不是等到编译阶段，因此必须在构建前就地打补丁：
+      #   1) gal 2.3.3：写的是 `compileSdk flutter.compileSdkVersion`。
+      #      `flutter` 这个 extension 不会自动注入到插件子工程，于是报
+      #      "Could not get unknown property 'flutter' for extension 'android'"
+      #      + "compileSdkVersion is not specified"。gal 最新版就是 2.3.3，
+      #      无版本可升，只能打补丁。
+      #   2) tflite_flutter 0.11.0：写死 `compileSdkVersion 31`，而 runner 上
+      #      只装了 android-34 / android-35，轮到它编译时必然失败。
+      # 三条 sed 规则都是幂等的（替换后再跑一次不会再命中）。
+      - name: 修补不兼容插件
+        continue-on-error: false
+        run: |
+          LOG="${LOG_DIR}/08b-plugin-patch.log"
+          PUB_CACHE_DIR="${HOME}/.pub-cache/hosted/pub.dev"
+
+          patch_plugins() {
+            echo "===== 插件 android/build.gradle 补丁 ====="
+            echo "扫描目录 : ${PUB_CACHE_DIR}"
+            echo "flutter  : $(flutter --version 2>/dev/null | head -n 1 || echo 'unknown')"
+            echo ""
+
+            if [ ! -d "${PUB_CACHE_DIR}" ]; then
+              echo "!! pub-cache 目录不存在，无法打补丁"
+              return 1
+            fi
+
+            scanned=0
+            patched=0
+
+            # 注意：这里用 for + glob，未命中时 $gradle 会是原样 pattern，
+            # 下面用 [ -f ] 兜住并在日志里说明「没命中」。
+            for gradle in "${PUB_CACHE_DIR}"/*/android/build.gradle; do
+              if [ ! -f "$gradle" ]; then
+                echo "[未命中] glob 没有匹配到任何插件 build.gradle：$gradle"
+                continue
+              fi
+              scanned=$((scanned + 1))
+
+              # 只挑出「需要修补」的行做快照（flutter.compileSdkVersion 或 compileSdkVersion 31）
+              before=$(grep -n -E "compileSdk(Version)?[[:space:]]+(flutter\.compileSdkVersion|31)([[:space:]]|$)" "$gradle" 2>/dev/null || true)
+              if [ -z "$before" ]; then
+                echo "[无需修补] $gradle"
+                continue
+              fi
+
+              echo "[修补] $gradle"
+              echo "  --- 替换前 ---"
+              printf '%s\n' "$before" | sed 's/^/    /'
+
+              # 幂等替换（GNU sed，runner 为 ubuntu-22.04）：
+              #   compileSdkVersion flutter.compileSdkVersion -> compileSdk 35
+              #   compileSdk        flutter.compileSdkVersion -> compileSdk 35
+              #   compileSdkVersion 31                        -> compileSdk 35
+              sed -i \
+                -e 's/compileSdkVersion[[:space:]]\+flutter\.compileSdkVersion/compileSdk 35/g' \
+                -e 's/compileSdk[[:space:]]\+flutter\.compileSdkVersion/compileSdk 35/g' \
+                -e 's/compileSdkVersion[[:space:]]\+31\([[:space:]]\|$\)/compileSdk 35\1/g' \
+                "$gradle"
+              if [ $? -ne 0 ]; then
+                echo "  !! sed 执行失败：$gradle"
+                return 1
+              fi
+
+              after=$(grep -n -E "compileSdk" "$gradle" 2>/dev/null || true)
+              echo "  --- 替换后 ---"
+              printf '%s\n' "$after" | sed 's/^/    /'
+              patched=$((patched + 1))
+            done
+
+            echo ""
+            echo "扫描文件数 : ${scanned}"
+            echo "修补文件数 : ${patched}"
+
+            echo ""
+            echo "===== 关键插件最终 compileSdk ====="
+            for key in gal tflite_flutter flutter_plugin_android_lifecycle; do
+              found=$(ls -1 ${PUB_CACHE_DIR}/${key}-*/android/build.gradle 2>/dev/null || true)
+              if [ -z "$found" ]; then
+                echo "  ${key}: 未安装（跳过）"
+              else
+                printf '%s\n' "$found" | while read -r f; do
+                  line=$(grep -E "compileSdk" "$f" 2>/dev/null | tr -d ' ' | tr '\n' ';' || true)
+                  echo "  ${key}: ${f} -> ${line}"
+                done
+              fi
+            done
+
+            echo ""
+            echo "===== 校验：是否还有未修补的旧写法 ====="
+            remain=$(grep -rn -E "flutter\.compileSdkVersion|compileSdkVersion[[:space:]]+31([[:space:]]|$)" \
+              ${PUB_CACHE_DIR}/*/android/build.gradle 2>/dev/null || true)
+            if [ -n "$remain" ]; then
+              echo "!! 仍存在未修补的写法："
+              printf '%s\n' "$remain"
+              return 1
+            fi
+            echo "OK：已无 flutter.compileSdkVersion / compileSdkVersion 31"
+            return 0
+          }
+
+          mkdir -p "${LOG_DIR}"
+          patch_plugins > "${LOG}" 2>&1
+          status=$?
+          cat "${LOG}"
+          echo "补丁步骤退出码 = ${status}"
+          exit ${status}
 
       # 8) 静态分析（不阻塞构建，仅报告）
       - name: 静态分析（不阻塞）

@@ -14,7 +14,13 @@ android {
     // MainActivity 包路径（com/dokalike/dokalike_camera），避免 CI 构建时
     // 找不到 MainActivity。显示名仍由 AndroidManifest.label 控制。
     namespace "com.dokalike.dokalike_camera"
-    compileSdk 34
+    // compileSdk 34 → 35：flutter_plugin_android_lifecycle 2.0.26 的插件自检
+    // 要求「Android SDK version 35 or higher」，compileSdk 低于 35 时 Gradle
+    // 会抛告警并在部分插件上直接判定不兼容。runner 上已装 android-35，取 35
+    // 可同时满足全部插件的最高要求。
+    // ⚠️ 注意：targetSdk 仍保持 34 不变——升到 35 会触发 Android 15 强制
+    // edge-to-edge（内容延伸到状态栏/导航栏下方），现有 UI 尚未适配，先不动。
+    compileSdk 35
     ndkVersion flutter.ndkVersion
 
     compileOptions {

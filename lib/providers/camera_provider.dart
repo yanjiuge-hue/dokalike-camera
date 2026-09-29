@@ -98,10 +98,18 @@ class CameraNotifier extends Notifier<CameraState> {
   CameraState build() {
     // 延时控制器状态联动（ChangeNotifier → Riverpod state）
     _timelapseSub?.cancel();
-    _timelapseSub = ref
-        .read(timelapseControllerProvider)
-        .addListener(_onTimelapseChanged);
-    ref.onDispose(() => _timelapseSub?.cancel());
+    // 修正：timelapseControllerProvider 提供的是 ChangeNotifier 子类
+    // TimelapseController，ChangeNotifier.addListener 返回 void，
+    // 不能把它的「返回值」赋给 StreamSubscription（原写法报
+    // use_of_void_result：把 void 表达式当值使用）。
+    // 改为直接注册回调，并在 onDispose 里反注册，避免 Notifier 重建后
+    // 旧回调继续触发（原逻辑靠 _timelapseSub 做这件事，但它永远是 null）。
+    final timelapseController = ref.read(timelapseControllerProvider);
+    timelapseController.addListener(_onTimelapseChanged);
+    ref.onDispose(() {
+      timelapseController.removeListener(_onTimelapseChanged);
+      _timelapseSub?.cancel();
+    });
     return const CameraState();
   }
 

@@ -1,6 +1,9 @@
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/geometry.dart';
 import '../../../models/composition_advice.dart';
+// 修正：GuideLineType / LineAxis 定义在 models/enums.dart，而 composition_advice.dart
+// 只 import 未 export，不会传递给本文件，需显式再 import 一次。
+import '../../../models/enums.dart';
 import 'composition_engine.dart';
 
 /// 黄金分割规则：主体中心到最近 φ 线交点的距离评分（φ ≈ 0.618）。

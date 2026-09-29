@@ -1,6 +1,14 @@
 import '../../../core/utils/geometry.dart';
 import '../../../models/composition_advice.dart';
 import '../../../models/detection_result.dart';
+// 修正：默认规则列表里直接构造了四个具体规则类，但之前没有 import 它们的
+// 定义文件，Dart 会把 SubjectRule() 当成「本类里未定义的方法」而报
+// undefined_method。补上四条 import（与 rule_*.dart 反向 import 本文件构成
+// 循环引用，Dart 允许，两处都只引用类型、无编译期常量环）。
+import 'rule_golden_ratio.dart';
+import 'rule_horizon.dart';
+import 'rule_subject.dart';
+import 'rule_thirds.dart';
 
 /// 规则评估上下文：规则只读，不产生副作用。
 class EvalContext {

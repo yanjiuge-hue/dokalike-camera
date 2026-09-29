@@ -17,7 +17,11 @@ class FaceDetectionService {
       : _detector = detector ??
             FaceDetector(
               options: FaceDetectorOptions(
-                performanceMode: PerformanceMode.fast,
+                // 修正：google_mlkit_face_detection 0.13.x 的 FaceDetectorOptions
+                // 只提供 enableLandmarks / enableContours / enableClassification /
+                // enableTracking / minFaceSize 五个参数，没有 performanceMode，
+                // 也没有 PerformanceMode 这个枚举（那是 Android 原生 API 的概念，
+                // 插件并未透出）。故删除该行，其余参数保持原语义不变。
                 enableLandmarks: false,
                 enableContours: false,
                 enableClassification: true, // 微笑概率（FaceBox.smilingProbability）

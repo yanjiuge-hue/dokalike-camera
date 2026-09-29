@@ -1,6 +1,10 @@
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/geometry.dart';
 import '../../../models/composition_advice.dart';
+// 修正：GuideLineType / LineAxis / MoveDirection 定义在 models/enums.dart。
+// composition_advice.dart 只是「import」了 enums.dart 而并非 export，
+// Dart 不会把导入传递出去，所以这里必须再显式 import 一次。
+import '../../../models/enums.dart';
 import 'composition_engine.dart';
 
 /// 三分法规则（P0-5）：主体中心到最近三分交点的距离评分。

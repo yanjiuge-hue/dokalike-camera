@@ -1,6 +1,10 @@
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/geometry.dart';
 import '../../../models/composition_advice.dart';
+// 修正：MoveDirection / FocalSuggestion 定义在 models/enums.dart，而
+// composition_advice.dart 只 import 未 export，符号不会传递过来，需显式再
+// import 一次（否则 const FocalHint 里还会连带报 Invalid constant value）。
+import '../../../models/enums.dart';
 import 'composition_engine.dart';
 
 /// 主体突出规则（P0-5）：过小 / 过偏 / 被裁切 / 过大四类判定。

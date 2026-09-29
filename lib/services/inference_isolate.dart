@@ -116,7 +116,15 @@ class InferenceIsolate {
           _pendingCompleter = null;
           return null;
         }
-        return completer.future.result as List<ObjectBox>?;
+        // 修正：Future 没有 `.result` getter（那是 Completer 都还没提供的
+        // 同步取值能力），原写法必然报 undefined_getter。语义上这里是「超时
+        // 与完成发生竞态」的分支：completer 若已完成，直接把它的 future 交回
+        // ——onTimeout 的返回值类型是 FutureOr<List<ObjectBox>?>，允许返回
+        // Future，无需也不可能在同步上下文里取出结果。同时复位 _inFlight，
+        // 避免 Isolate 被永久判定为忙碌。
+        _inFlight = false;
+        _pendingCompleter = null;
+        return completer.future;
       },
     );
   }

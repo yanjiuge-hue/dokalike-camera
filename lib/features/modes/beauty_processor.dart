@@ -45,7 +45,11 @@ class BeautyProcessor {
         final y = pixel.y;
         if (!_isSkin(snapshot.getPixel(x, y))) continue;
 
-        var sumR = 0, sumG = 0, sumB = 0, count = 0;
+        // 修正：image 4.x 的 Pixel 通道访问器（r/g/b）静态类型是 num，
+        // num 不能直接累加进 int（invalid_assignment）。改成以 double 累加，
+        // 语义不变（8bit 通道值本身就是整数，求和结果完全一致），
+        // 后续 (sumR / count) 本来就要走浮点除法。count 仍保持 int。
+        var sumR = 0.0, sumG = 0.0, sumB = 0.0, count = 0;
         for (var dy = -1; dy <= 1; dy++) {
           for (var dx = -1; dx <= 1; dx++) {
             final nx = x + dx;

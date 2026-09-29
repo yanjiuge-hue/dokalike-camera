@@ -12,7 +12,10 @@ import '../models/enums.dart';
 /// 注意：本文件使用 `import ... as cam` 别名以避免 camera 插件的
 /// `ResolutionPreset` 与业务模型 [ResolutionPreset] 重名。
 class CameraService {
-  CameraController? controller;
+  // 修正：本文件把 camera 插件 import 成别名 `cam`（避免插件的 ResolutionPreset
+  // 与业务模型重名），因此 CameraController 必须写成 cam.CameraController，
+  // 少了前缀就报 Undefined class 'CameraController'。
+  cam.CameraController? controller;
 
   /// 设备相机列表（判断多镜头用，A-5）
   List<cam.CameraDescription> cameras = const [];

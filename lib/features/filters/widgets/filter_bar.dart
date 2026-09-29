@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+// 修正：FilterPreset 定义在 lib/models/filter_preset.dart，之前漏了这条
+// import，导致第 81 行 `final FilterPreset preset;` 报 Undefined class。
+import '../../../models/filter_preset.dart';
 import '../../../providers/filter_provider.dart';
 import '../data/filter_catalog.dart';
 

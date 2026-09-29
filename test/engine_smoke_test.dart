@@ -219,7 +219,7 @@ void main() {
     });
 
     test('HorizonRule 水平/倾斜评分', () {
-      const rule = HorizonRule();
+      final rule = HorizonRule();
       const levelMeta = FrameMeta(
           width: 100, height: 100, quarterTurns: 0,
           isFrontCamera: false, previewAspect: 1, rollAngleDeg: 0);
@@ -233,7 +233,8 @@ void main() {
     });
 
     test('SubjectRule 被裁切判定', () {
-      const rule = SubjectRule();
+      // 修正：SubjectRule 没有 const 构造函数，不能用 const 声明实例。
+      final rule = SubjectRule();
       final ctx = EvalContext(
         input: _emptyResult,
         meta: const FrameMeta(width: 100, height: 100, quarterTurns: 0,

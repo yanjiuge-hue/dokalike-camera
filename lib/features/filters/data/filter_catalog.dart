@@ -1,6 +1,10 @@
-import '../../core/constants/asset_paths.dart';
-import '../../models/enums.dart';
-import '../../models/filter_preset.dart';
+// 修正：本文件位于 lib/features/filters/data/，要回到 lib/ 需要三级 `../`
+// （data → filters → features → lib）。原来只写了两级，解析成
+// lib/features/core/... 与 lib/features/models/...，两个目录都不存在，
+// 于是 AssetPaths / FilterCategory / FilterPreset 全部未定义（约 200 处报错）。
+import '../../../core/constants/asset_paths.dart';
+import '../../../models/enums.dart';
+import '../../../models/filter_preset.dart';
 
 /// 滤镜目录：首发 8 款原创命名胶片滤镜 + 原图（A-6 假设）。
 ///

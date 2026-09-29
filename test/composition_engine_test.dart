@@ -123,7 +123,7 @@ void main() {
   });
 
   group('SubjectRule', () {
-    const rule = SubjectRule();
+    final rule = SubjectRule();
 
     test('无主体：中性 0.5', () {
       final ctx = EvalContext(
@@ -225,7 +225,7 @@ void main() {
   });
 
   group('ThirdsRule', () {
-    const rule = ThirdsRule();
+    final rule = ThirdsRule();
 
     test('永远输出 8 条三分线', () {
       final ctx = EvalContext(
@@ -267,7 +267,8 @@ void main() {
   });
 
   group('GoldenRatioRule', () {
-    const rule = GoldenRatioRule();
+    // 修正：GoldenRatioRule 无 const 构造函数，不能用 const 声明（同上）。
+    final rule = GoldenRatioRule();
 
     test('永远输出 8 条黄金线', () {
       final ctx = EvalContext(
@@ -290,7 +291,7 @@ void main() {
   });
 
   group('HorizonRule', () {
-    const rule = HorizonRule();
+    final rule = HorizonRule();
     const baseMeta = FrameMeta(
       width: 100, height: 100, quarterTurns: 0,
       isFrontCamera: false, previewAspect: 1,

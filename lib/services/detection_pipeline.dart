@@ -217,9 +217,16 @@ class DetectionPipeline {
     final yRowStride = yPlane.bytesPerRow;
     final uRowStride = uPlane.bytesPerRow;
     final vRowStride = vPlane.bytesPerRow;
-    final yPixStride = yPlane.pixelStride;
-    final uPixStride = uPlane.pixelStride;
-    final vPixStride = vPlane.pixelStride;
+    // 修正：camera 0.11 的 Plane 只暴露 bytes / bytesPerRow / width / height，
+    // 已经移除 pixelStride（故报 undefined_getter），下游索引又要求 int。
+    // 这里按「行跨距 ÷ 该平面每行像素数」反推像素跨距：
+    //   · Y 平面每行 width 个像素            → 通常是 1；
+    //   · U/V 平面水平 2:1 下采样，每行 width ~/ 2 个像素
+    //     → NV21/NV12 交错存储时推导出 2，I420 平面存储时推导出 1，
+    //       与原先 pixelStride 的取值一致。
+    final yPixStride = _pixelStride(yRowStride, width);
+    final uPixStride = _pixelStride(uRowStride, width ~/ 2);
+    final vPixStride = _pixelStride(vRowStride, width ~/ 2);
 
     final bytes = Uint8List(width * height * 3);
     final yBytes = yPlane.bytes;
@@ -258,6 +265,16 @@ class DetectionPipeline {
       avgR: sumR / pixelCount,
       avgB: sumB / pixelCount,
     );
+  }
+
+  /// 由行跨距反推像素跨距（camera 0.11 移除 Plane.pixelStride 后的替代实现）。
+  ///
+  /// [pixelsPerRow] 为该平面每行实际像素数：Y 平面 = 图像宽，U/V 平面 = 宽的一半。
+  /// 结果最小为 1，避免除零或跨距为 0 导致索引恒取首像素。
+  static int _pixelStride(int rowStride, int pixelsPerRow) {
+    if (rowStride <= 0 || pixelsPerRow <= 0) return 1;
+    final stride = rowStride ~/ pixelsPerRow;
+    return stride < 1 ? 1 : stride;
   }
 
   /// 亮度估计：Y 平面抽样平均（/255）。
