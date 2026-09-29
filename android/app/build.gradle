@@ -55,16 +55,12 @@ android {
         pickFirst 'assets/**/*.tflite'
     }
 
-    // 按 ABI 拆分以控制单包体积（Release）。
-    // 这里同时承担 ABI 过滤职责，故 defaultConfig 中不再写 ndk.abiFilters。
-    splits {
-        abi {
-            enable true
-            reset()
-            include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
-            universalApk false
-        }
-    }
+    // ⚠️ 不要在 gradle 里配置 splits.abi！
+    // Flutter Gradle 插件在 `flutter build apk --split-per-abi` 时会自行
+    // 注入 ndk.abiFilters 与 ABI 拆分逻辑；若此处再手写 splits.abi，
+    // 两者的 ABI 集合相同即触发 AGP 冲突：
+    //   "Configuration conflict: ABI '...' in ndk abi cannot appear in ABI splits"
+    // 拆分由 workflow 中的 `flutter build apk --release --split-per-abi` 完成。
 
     // ⚠️ 不要自定义 signingConfigs.debug。
     // Android Gradle Plugin 会自动创建 debug signingConfig 并指向

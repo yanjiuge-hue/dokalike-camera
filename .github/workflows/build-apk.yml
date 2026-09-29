@@ -103,9 +103,12 @@ jobs:
       - name: 单元测试（不阻塞）
         run: flutter test || true
 
-      # 8) 构建 Release APK（split-per-abi 已在 build.gradle 开启，会产出 3 个 APK）
+      # 8) 构建 Release APK。
+      #    --split-per-abi 由 Flutter 插件自动完成 ABI 过滤与分包，产出 3 个 APK。
+      #    注意：不要在 gradle 里手写 splits.abi，否则与插件注入的
+      #    ndk.abiFilters 冲突（"Configuration conflict: ABI ..."）导致构建失败。
       - name: 构建 Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --split-per-abi
 
       # 8.5) 无论成败都保留构建目录，便于排查失败原因
       - name: 上传构建目录（调试用）
