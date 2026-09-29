@@ -14,24 +14,25 @@ android {
     // MainActivity 包路径（com/dokalike/dokalike_camera），避免 CI 构建时
     // 找不到 MainActivity。显示名仍由 AndroidManifest.label 控制。
     namespace "com.dokalike.dokalike_camera"
-    // compileSdk 34 → 35：flutter_plugin_android_lifecycle 2.0.26 的插件自检
-    // 要求「Android SDK version 35 or higher」，compileSdk 低于 35 时 Gradle
-    // 会抛告警并在部分插件上直接判定不兼容。runner 上已装 android-35，取 35
-    // 可同时满足全部插件的最高要求。
-    // ⚠️ 注意：targetSdk 仍保持 34 不变——升到 35 会触发 Android 15 强制
-    // edge-to-edge（内容延伸到状态栏/导航栏下方），现有 UI 尚未适配，先不动。
-    compileSdk 35
-    // ⚠️ 必须显式指定 buildToolsVersion，否则 AGP 7.3.0 会取它的默认值
-    // 30.0.3（2020 年的 aapt2），而这个老 aapt2 解析不了 android-35 的
-    // resources.arsc，:app:processReleaseResources 会直接崩：
-    //   aapt2 E ... LoadedArsc.cpp:94] RES_TABLE_TYPE_TYPE entry offsets
-    //               overlap actual entry data.
-    //   aapt2 E ... ApkAssets.cpp:149] Failed to load resources table in APK
-    //               '.../platforms/android-35/android.jar'.
-    //   error: failed to load include path .../platforms/android-35/android.jar
-    // 表现上很像「android-35 平台的 jar 坏了」，其实是 aapt2 太旧。runner 上
-    // 已预装 35.0.0 / 35.0.1，钉 35.0.0 与 compileSdk 35 同源，一步到位。
-    buildToolsVersion "35.0.0"
+    // compileSdk 回到 34：AGP 7.3.0（2022 年发布）根本没有为 Android 15
+    // （API 35）做过适配，compileSdk 35 时 :app:processReleaseResources 会崩在
+    //   aapt2 E LoadedArsc.cpp:94] RES_TABLE_TYPE_TYPE entry offsets
+    //           overlap actual entry data.
+    //   aapt2 E ApkAssets.cpp:149] Failed to load resources table in APK
+    //           '.../platforms/android-35/android.jar'.
+    // 显式 buildToolsVersion 35.0.0 也没能救回来（见 run 36562623986），
+    // 所以改为「平台 + 构建工具 + 插件」三者统一降到 34 —— 这是 AGP 7.3.0
+    // 原生支持的组合（34 正是它同期的主流 API 级别），build-tools 34.0.0
+    // 在 runner 上是预装的。插件里硬编码 compileSdk 35 的三个
+    // （flutter_plugin_android_lifecycle / google_mlkit_commons /
+    // google_mlkit_face_detection）由 CI 的插件补丁步骤统一 sed 成 34。
+    // ⚠️ targetSdk 保持 34 不变——升到 35 会触发 Android 15 强制
+    // edge-to-edge（内容延伸到状态栏/导航栏下方），现有 UI 尚未适配。
+    compileSdk 34
+    // ⚠️ 必须显式指定：AGP 7.3.0 的默认 buildToolsVersion 是 30.0.3（2020 年的
+    // aapt2），runner 上没装、Gradle 会当场联网下载，而它解析不了 android-34
+    // 的资源表。钉 34.0.0（预装）与 compileSdk 34 同源。
+    buildToolsVersion "34.0.0"
     ndkVersion flutter.ndkVersion
 
     compileOptions {

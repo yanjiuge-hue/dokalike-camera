@@ -91,6 +91,18 @@ jobs:
             ls -1 "$SDK/platforms" 2>/dev/null || true
             echo "-- 补齐后的 build-tools --"
             ls -1 "$SDK/build-tools" 2>/dev/null || true
+
+            echo "-- android.jar 完整性（aapt2 报 'Failed to load resources table' 时先看这里）--"
+            for p in 33 34 35 36; do
+              jar="$SDK/platforms/android-$p/android.jar"
+              if [ -f "$jar" ]; then
+                echo "  android-$p: $(stat -c '%s bytes' "$jar")"
+                # unzip -t 会校验每个条目的 CRC；只要有一个坏条目就说明 jar 不完整
+                unzip -t "$jar" 2>&1 | tail -n 2 | sed 's/^/    /'
+              else
+                echo "  android-$p: 未安装"
+              fi
+            done
           } 2>&1 | tee "${LOG_DIR}/02-sdk.log"
 
       # 5) ★关键★ 重建完整平台脚手架
@@ -222,7 +234,13 @@ jobs:
       #      无版本可升，只能打补丁。
       #   2) tflite_flutter 0.11.0：写死 `compileSdkVersion 31`，而 runner 上
       #      只装了 android-34 / android-35，轮到它编译时必然失败。
-      # 三条 sed 规则都是幂等的（替换后再跑一次不会再命中）。
+      #   3) flutter_plugin_android_lifecycle / google_mlkit_commons /
+      #      google_mlkit_face_detection：写死 `compileSdk 35`（或 `compileSdk = 35`）。
+      #      而 AGP 7.3.0 没有适配 Android 15（API 35）——compileSdk 35 时
+      #      :app:processReleaseResources 会崩在 aapt2 读不懂 android-35 的
+      #      资源表（显式 buildToolsVersion 35.0.0 也救不回来，见 run 36562623986）。
+      #      因此这里统一把 35 拉回 34，与 app 的 compileSdk 34 对齐。
+      # 所有 sed 规则都是幂等的（替换后再跑一次不会再命中）。
       - name: 修补不兼容插件
         continue-on-error: false
         run: |
@@ -252,8 +270,9 @@ jobs:
               fi
               scanned=$((scanned + 1))
 
-              # 只挑出「需要修补」的行做快照（flutter.compileSdkVersion 或 compileSdkVersion 31）
-              before=$(grep -n -E "compileSdk(Version)?[[:space:]]+(flutter\.compileSdkVersion|31)([[:space:]]|$)" "$gradle" 2>/dev/null || true)
+              # 只挑出「需要修补」的行做快照：
+              # flutter.compileSdkVersion / compileSdkVersion 31 / 任何写死的 35
+              before=$(grep -n -E "compileSdk(Version)?[[:space:]]*(=)?[[:space:]]*(flutter\.compileSdkVersion|31|35)([[:space:]]|$)" "$gradle" 2>/dev/null || true)
               if [ -z "$before" ]; then
                 echo "[无需修补] $gradle"
                 continue
@@ -263,14 +282,20 @@ jobs:
               echo "  --- 替换前 ---"
               printf '%s\n' "$before" | sed 's/^/    /'
 
-              # 幂等替换（GNU sed，runner 为 ubuntu-22.04）：
-              #   compileSdkVersion flutter.compileSdkVersion -> compileSdk 35
-              #   compileSdk        flutter.compileSdkVersion -> compileSdk 35
-              #   compileSdkVersion 31                        -> compileSdk 35
+              # 幂等替换（GNU sed，runner 为 ubuntu-22.04）。
+              # 统一目标 = 34，与 android/app/build.gradle 的 compileSdk 34 /
+              # buildToolsVersion 34.0.0 对齐（AGP 7.3.0 原生支持的组合）：
+              #   compileSdkVersion flutter.compileSdkVersion -> compileSdk 34
+              #   compileSdk        flutter.compileSdkVersion -> compileSdk 34
+              #   compileSdkVersion 31 / 35                   -> compileSdk 34
+              #   compileSdk 35 / compileSdk = 35             -> compileSdk 34
               sed -i \
-                -e 's/compileSdkVersion[[:space:]]\+flutter\.compileSdkVersion/compileSdk 35/g' \
-                -e 's/compileSdk[[:space:]]\+flutter\.compileSdkVersion/compileSdk 35/g' \
-                -e 's/compileSdkVersion[[:space:]]\+31\([[:space:]]\|$\)/compileSdk 35\1/g' \
+                -e 's/compileSdkVersion[[:space:]]\+flutter\.compileSdkVersion/compileSdk 34/g' \
+                -e 's/compileSdk[[:space:]]\+flutter\.compileSdkVersion/compileSdk 34/g' \
+                -e 's/compileSdkVersion[[:space:]]\+31\([[:space:]]\|$\)/compileSdk 34\1/g' \
+                -e 's/compileSdkVersion[[:space:]]\+35\([[:space:]]\|$\)/compileSdk 34\1/g' \
+                -e 's/compileSdk[[:space:]]*[[:space:]]\+35\([[:space:]]\|$\)/compileSdk 34\1/g' \
+                -e 's/compileSdk[[:space:]]*=[[:space:]]*35\([[:space:]]\|$\)/compileSdk 34\1/g' \
                 "$gradle"
               if [ $? -ne 0 ]; then
                 echo "  !! sed 执行失败：$gradle"
@@ -337,14 +362,14 @@ jobs:
 
             echo ""
             echo "===== 校验：是否还有未修补的旧写法 ====="
-            remain=$(grep -rn -E "flutter\.compileSdkVersion|compileSdkVersion[[:space:]]+31([[:space:]]|$)" \
+            remain=$(grep -rn -E "flutter\.compileSdkVersion|compileSdk(Version)?[[:space:]]*(=)?[[:space:]]*(31|35)([[:space:]]|$)" \
               ${PUB_CACHE_DIR}/*/android/build.gradle 2>/dev/null || true)
             if [ -n "$remain" ]; then
-              echo "!! 仍存在未修补的写法："
+              echo "!! 仍存在未修补的写法（目标应全部为 compileSdk 34）："
               printf '%s\n' "$remain"
               return 1
             fi
-            echo "OK：已无 flutter.compileSdkVersion / compileSdkVersion 31"
+            echo "OK：插件 compileSdk 已全部对齐 34（无 flutter.compileSdkVersion / 31 / 35）"
 
             kt_remain=$(grep -rn -E "ext\.kotlin_version[[:space:]]*=[[:space:]]*['\"]1\.[67]\.[0-9]+['\"]" \
               ${PUB_CACHE_DIR}/*/android/build.gradle 2>/dev/null || true)
