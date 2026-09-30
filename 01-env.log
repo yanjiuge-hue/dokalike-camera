@@ -1,0 +1,42 @@
+===== RUN INFO =====
+repository : yanjiuge-hue/dokalike-camera
+run_id     : 36659957536
+attempt    : 1
+commit     : aa89ccfef0fc1cc3e465c289164bc892a12eaead
+ref        : refs/heads/main
+===== JAVA =====
+openjdk version "11.0.32.1" 2026-08-18
+OpenJDK Runtime Environment Temurin-11.0.32.1+1 (build 11.0.32.1+1)
+OpenJDK 64-Bit Server VM Temurin-11.0.32.1+1 (build 11.0.32.1+1, mixed mode)
+===== ANDROID SDK =====
+ANDROID_HOME     = /usr/local/lib/android/sdk
+ANDROID_SDK_ROOT = /usr/local/lib/android/sdk
+SDK dir          = /usr/local/lib/android/sdk
+-- installed platforms --
+android-34
+android-34-ext10
+android-34-ext11
+android-34-ext12
+android-34-ext8
+android-35
+android-35-ext14
+android-35-ext15
+android-36
+android-36-ext18
+android-36-ext19
+android-36.1
+android-37.0
+android-37.1
+android-37.2
+android-37.2-beta1
+android-37.2-beta2
+android-37.2-beta3
+-- installed build-tools --
+34.0.0
+35.0.0
+35.0.1
+36.0.0
+36.1.0
+37.0.0
+===== 磁盘空间 =====
+/dev/root       146G   60G   87G  41% /

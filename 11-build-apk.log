@@ -1,0 +1,20 @@
+
+Running Gradle task 'assembleRelease'...                        
+[signing] release 未配置正式密钥，回退 debug 签名（仅供自测，不可上架）
+Checking the license for package Android SDK Build-Tools 33.0.1 in /usr/local/lib/android/sdk/licenses
+License for package Android SDK Build-Tools 33.0.1 accepted.
+Preparing "Install Android SDK Build-Tools 33.0.1 v.33.0.1".
+"Install Android SDK Build-Tools 33.0.1 v.33.0.1" ready.
+Installing Android SDK Build-Tools 33.0.1 in /usr/local/lib/android/sdk/build-tools/33.0.1
+"Install Android SDK Build-Tools 33.0.1 v.33.0.1" complete.
+"Install Android SDK Build-Tools 33.0.1 v.33.0.1" finished.
+Note: /home/runner/.pub-cache/hosted/pub.dev/google_mlkit_commons-0.11.0/android/src/main/java/com/google_mlkit_commons/InputImageConverter.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+Note: /home/runner/.pub-cache/hosted/pub.dev/google_mlkit_face_detection-0.13.1/android/src/main/java/com/google_mlkit_face_detection/FaceDetector.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 3804 bytes (99.8% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+Caught exception: Already watching path: /home/runner/work/dokalike-camera/dokalike-camera/android
+Running Gradle task 'assembleRelease'...                          180.1s
+✓ Built build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk (38.0MB)
+✓ Built build/app/outputs/flutter-apk/app-arm64-v8a-release.apk (46.1MB)
+✓ Built build/app/outputs/flutter-apk/app-x86_64-release.apk (50.4MB)

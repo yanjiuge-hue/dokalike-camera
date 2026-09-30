@@ -1,0 +1,137 @@
+
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/pure_logic_guard_test.dart: 纯逻辑模块零平台依赖（禁止 flutter/camera/dart:io import）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: EmaFilter 平滑：连续输入逐步收敛
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: EmaFilter 丢失保持：missLimit 内保持上一状态，超限后置空
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: EmaFilter reset 清空状态
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: Rect01 / geometry area 裁剪到 [0,1]
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: Rect01 / geometry isClippedByFrame 越界检测
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: Rect01 / geometry rotateQuarterTurns 顺时针 90°
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: Throttler 间隔内不允许执行
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: ColorMatrixKit identity 不改变像素
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: ColorMatrixKit lerp t=0/1 端点
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: ColorMatrixKit FilterPreset.matrixAt 强度插值
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: FilterRecommender 夜景场景推荐夜港/墨影且按置信度降序
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: FilterRecommender 人像场景推荐人像滤镜
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: FilterRecommender 原图不参与推荐
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: CompositionEngine 无主体：中性评分且输出引导线
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: CompositionEngine 主体过小：给出靠近提示
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: CompositionEngine 主体大小位置良好：高评分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: CompositionEngine HorizonRule 水平/倾斜评分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/engine_smoke_test.dart: CompositionEngine SubjectRule 被裁切判定
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.identity 长度 20
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.identity 对任意像素不变
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.lerp t=0 返回 a
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.lerp t=1 返回 b
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.lerp t=0.5 中点插值
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.lerp t<0 clamp 到 0
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.lerp t>1 clamp 到 1
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.apply 纯偏移矩阵：offset=0.1 对 R 通道 +25.5
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.apply 负 offset 压暗
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.apply clamp255：结果不超出 [0,255]
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.apply clamp255：负结果 clamp 到 0
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.apply alpha 通道：m[18] 系数生效
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: ColorMatrixKit.apply 预览/落盘一致性：identity 对黑白灰三像素均不变
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterPreset.matrixAt original 任意强度都返回 identity
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterPreset.matrixAt 强度 0 返回 identity
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterPreset.matrixAt 强度 1 返回完整滤镜矩阵
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterPreset.matrixAt 强度 0.5 为中点插值
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterPreset.matrixAt 强度 >1 clamp 到 1
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterPreset.matrixAt 强度 <0 clamp 到 0
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterPreset.matrixAt 每款滤镜矩阵长度均为 20
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterCatalog 共 9 款（含原图）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterCatalog byId 找不到回退原图
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterCatalog 每款 id 唯一
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterCatalog original 的 isOriginal=true，其余 false
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/color_matrix_test.dart: FilterCatalog 合规：名称不含商标（Doka/Kodak/Agfa/Fuji 等）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.alpha 边界 α=0：完全保持旧值（输入被忽略）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.alpha 边界 α=1：不滤波，直接采用新值
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.alpha 边界 α 被 clamp 到 [0,1]（传入 1.5 等价 1.0）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.alpha 边界 α 被 clamp 到 [0,1]（传入 -0.5 等价 0.0）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.点滤波 首帧：直接采用输入（无旧值可插值）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.点滤波 连续输入逐步收敛到目标
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.点滤波 收敛过程单调递增（向更大目标值）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.矩形滤波 首帧直接采用
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.矩形滤波 四边各自独立插值
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.丢失保持与超限置空 点：missLimit-1 次丢失保持，第 missLimit 次置空
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.丢失保持与超限置空 矩形：超限置空后 isHolding 仍可恢复
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.丢失保持与超限置空 丢失后重新获得目标：missCount 重置
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.reset reset 清空点与矩形状态
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.reset reset 后首帧等同全新滤波器
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/ema_filter_test.dart: EmaFilter.设计文档化（非 bug） update 与 updateRect 共享 missCount：点流丢失会加速矩形置空
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Offset01 distanceTo 同点为 0
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Offset01 distanceTo 对角点 ≈ √2
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Offset01 Equatable：相同坐标相等
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.fromLTWH 正确计算 right/bottom
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.full 全屏矩形
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.area 裁剪到 [0,1] 完全在画面内
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.area 裁剪到 [0,1] 左侧越界：裁剪后面积正确
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.area 裁剪到 [0,1] 完全越界：面积为 0
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.area 裁剪到 [0,1] 右侧/下侧越界裁剪
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.isEmpty 零宽为空
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.isEmpty 负高为空
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.isEmpty 正常矩形非空
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.isClippedByFrame 默认 epsilon=0.02：微越界不算裁切
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.isClippedByFrame 默认 epsilon：明显越界算裁切
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.isClippedByFrame 自定义 epsilon=0：任何越界都算裁切
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.isClippedByFrame 右侧越界
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.isClippedByFrame 完全在画面内不裁切
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.clamp01 越界四边全部裁剪到 [0,1]
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.clamp01 画面内不变
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.translated 整体平移不裁剪
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.copyWith 部分字段覆盖
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: Rect01.center 中心点正确
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: rotateQuarterTurns 0 圈：不变
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: rotateQuarterTurns 4 圈等价 0 圈
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: rotateQuarterTurns 顺时针 90°：左下角变左上
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: rotateQuarterTurns 180°：左右上下翻转
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: rotateQuarterTurns 负数 turns 归一化（-1 ≡ 3）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/geometry_test.dart: rotateQuarterTurns 大数 turns 归一化（5 ≡ 1）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.基础 结果非空且不超过上限 5
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.基础 原图不参与推荐
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.基础 按置信度降序排列
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.基础 置信度 ∈ [0, 0.98]
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.基础 每项 reason 非空
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.基础 空 catalog 返回空列表（不崩溃）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.场景匹配 夜景 + 暗光：夜港/墨影置顶
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.场景匹配 人像 + 有人脸：人像滤镜加分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.场景匹配 食物场景：暖调滤镜优先
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.场景匹配 风景场景：冷暖滤镜均可推荐
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.亮度边界 极暗 luminance=0：夜景滤镜仍推荐
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.亮度边界 极亮 luminance=1.0：冷调滤镜加分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.亮度边界 中等亮度 0.5：不触发亮度加分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.色温边界 暖光 colorTemperature=1.0：暖调滤镜置顶
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.色温边界 冷光 colorTemperature=0.0：冷调滤镜置顶
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.色温边界 中性色温 0.5：不触发色温加分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/filter_recommender_test.dart: FilterRecommender.人脸数量 无人脸：人像滤镜不额外加分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: CompositionEngine.综合 无主体：中性评分且输出引导线
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: CompositionEngine.综合 主体大小位置良好：高评分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: CompositionEngine.综合 isGoodComposition 阈值判定
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: CompositionEngine._pickPrimarySubject 多物体取面积最大者
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: CompositionEngine._pickPrimarySubject 人脸优先于物体（同面积）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: SubjectRule 无主体：中性 0.5
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: SubjectRule 主体过小（面积<8%）：给靠近提示
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: SubjectRule 主体过大（面积>65%）：给拉远提示
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: SubjectRule 主体被裁切：给逃离提示
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: SubjectRule 主体右侧被裁切：向左移
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: SubjectRule 主体过偏（水平）：给水平方向提示
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: SubjectRule 主体大小位置良好：满分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: SubjectRule 多镜头设备 + 主体过小：给长焦建议
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: SubjectRule 多镜头设备 + 主体过大：给广角建议
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: ThirdsRule 永远输出 4 条三分线
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: ThirdsRule 主体中心在三分交点：高分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: ThirdsRule 主体远离三分点：低分且有方向提示
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: ThirdsRule 无主体：中性评分仍输出引导线
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: GoldenRatioRule 永远输出 4 条黄金线
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: GoldenRatioRule 主体中心在黄金交点（0.382, 0.382）：高分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: HorizonRule 完全水平（0°）：满分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: HorizonRule 容差内（1.5°）：满分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: HorizonRule 超出容差（5°）：部分扣分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: HorizonRule 满偏（10°+）：0 分
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: HorizonRule 负角度（右倾）：提示向左回正
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: HorizonRule 正角度（左倾）：提示向右回正
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: 规则权重 主体规则权重最高（0.35）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: 规则权重 三分法与水平校正权重 0.25
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: 规则权重 黄金分割权重最低（0.15）
+✅ /home/runner/work/dokalike-camera/dokalike-camera/test/composition_engine_test.dart: 规则权重 权重总和 = 1.0
+
+🎉 134 tests passed.
