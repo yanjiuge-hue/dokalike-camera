@@ -181,6 +181,39 @@ jobs:
             exit 1
           fi
 
+          echo ">>> 升级 Android Gradle Plugin（7.3.0 → 8.1.2）与 Gradle（7.6.3 → 8.3）"
+          # 背景：:app:mergeExtDexRelease 阶段 D8 崩：
+          #   ERROR: jetified-camera-video-1.4.1-runtime.jar: D8:
+          #     java.lang.NullPointerException: Cannot invoke "String.length()"
+          #     because "<parameter1>" is null
+          #   ERROR: jetified-error_prone_annotations-2.36.0.jar: D8: 同上
+          #   ERROR: jetified-camera-camera2-1.4.1-runtime.jar / camera-core-1.4.1: 同上
+          #   Execution failed for task ':app:mergeExtDexRelease'.
+          # 这是 D8/R8 的已知 bug：它假定方法的形参名永远不为 null，而 2024 年的
+          # 构件里存在「无名形参」（新版 JDK 编译产物）。修复只 backport 到了
+          # **AGP 8.0+**，AGP 7.x 任何版本都没有，因此只能升 AGP。
+          # （已核实不是 jar 损坏：unzip -t 校验 android-34/35/36 全部 OK；
+          #  也不是 class 文件版本过高：camera-core/classes.jar 全是 v52/Java 8）
+          # AGP 8.1.2 要求 Gradle 8.0+，这里同步升到 8.3；JDK 17、Kotlin 1.8.22、
+          # compileSdk 34 均满足 AGP 8.x 要求。
+          sed -i 's/id "com.android.application" version "7.3.0" apply false/id "com.android.application" version "8.1.2" apply false/' \
+            android/settings.gradle
+          sed -i 's/gradle-7\.6\.3-all\.zip/gradle-8.3-all.zip/' \
+            android/gradle/wrapper/gradle-wrapper.properties
+          echo "  升级后的 AGP 声明："
+          grep -n "com.android.application" android/settings.gradle | sed 's/^/    /'
+          echo "  升级后的 Gradle 分发："
+          grep -n "distributionUrl" android/gradle/wrapper/gradle-wrapper.properties | sed 's/^/    /'
+          # 幂等校验：替换未命中就让构建立刻失败，避免静默跑旧版本
+          if ! grep -q 'com.android.application" version "8.1.2"' android/settings.gradle; then
+            echo "  !! AGP 升级未生效，请检查模板声明是否变化"
+            exit 1
+          fi
+          if ! grep -q 'gradle-8.3-all.zip' android/gradle/wrapper/gradle-wrapper.properties; then
+            echo "  !! Gradle 升级未生效，请检查 wrapper 声明是否变化"
+            exit 1
+          fi
+
           echo ">>> 留存模板产物，便于核对 AGP / Kotlin 版本"
           cp android/settings.gradle      "${LOG_DIR}/03-template-settings.gradle"
           cp android/app/build.gradle     "${LOG_DIR}/04-template-app-build.gradle"
