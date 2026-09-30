@@ -189,7 +189,7 @@ void main() {
       final advice = engine.evaluate(
         resultOf(objects: [
           const ObjectBox(
-            rect: const Rect01(
+            rect: Rect01(
                 left: 0.45, top: 0.4, right: 0.55, bottom: 0.5),
             label: 'person',
             confidence: 0.9,
@@ -206,7 +206,7 @@ void main() {
       final advice = engine.evaluate(
         resultOf(objects: [
           const ObjectBox(
-            rect: const Rect01(
+            rect: Rect01(
                 left: 0.25, top: 0.25, right: 0.75, bottom: 0.75),
             label: 'person',
             confidence: 0.9,

@@ -104,7 +104,7 @@ class _SettingsSheet extends ConsumerWidget {
               contentPadding: EdgeInsets.zero,
               title: Text('版本'),
               trailing: Text('v1.0.0',
-                  style: const TextStyle(color: Colors.white38)),
+                  style: TextStyle(color: Colors.white38)),
             ),
           ],
         ),

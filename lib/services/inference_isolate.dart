@@ -228,12 +228,15 @@ class InferenceIsolate {
         switch (message['type'] as String?) {
           case 'init':
             labels = (message['labels'] as List).cast<String>();
-            interpreter = Interpreter.fromBuffer(
+            // 用局部非空变量接住：interpreter 声明为 Interpreter?，且被本闭包
+            // 反复赋值，Dart 不会为它做类型提升（argument_type_not_assignable）。
+            final created = Interpreter.fromBuffer(
               message['modelBytes'] as Uint8List,
             );
+            interpreter = created;
             // 打印模型张量契约，便于在 CI / 真机日志里核对模型是否匹配
             // 期望：输入 1×300×300×3；输出 4 个张量（固定顺序）
-            _logModelContract(interpreter);
+            _logModelContract(created);
             mainSendPort.send(<String, dynamic>{'type': 'initDone'});
           case 'detect':
             if (paused || interpreter == null) {

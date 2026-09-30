@@ -5,7 +5,6 @@ import 'package:dokalike_camera/features/composition/engine/rule_golden_ratio.da
 import 'package:dokalike_camera/features/composition/engine/rule_horizon.dart';
 import 'package:dokalike_camera/features/composition/engine/rule_subject.dart';
 import 'package:dokalike_camera/features/composition/engine/rule_thirds.dart';
-import 'package:dokalike_camera/models/composition_advice.dart';
 import 'package:dokalike_camera/models/detection_result.dart';
 import 'package:dokalike_camera/models/enums.dart';
 
@@ -53,7 +52,7 @@ void main() {
       final advice = engine.evaluate(
         resultOf(objects: [
           const ObjectBox(
-            rect: const Rect01(left: 0.25, top: 0.25, right: 0.75, bottom: 0.75),
+            rect: Rect01(left: 0.25, top: 0.25, right: 0.75, bottom: 0.75),
             label: 'person', confidence: 0.9,
           ),
         ]),
@@ -68,7 +67,7 @@ void main() {
       final advice = engine.evaluate(
         resultOf(objects: [
           const ObjectBox(
-            rect: const Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7),
+            rect: Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7),
             label: 'person', confidence: 0.9,
           ),
         ]),
@@ -86,11 +85,11 @@ void main() {
       final advice = engine.evaluate(
         resultOf(objects: [
           const ObjectBox(
-            rect: const Rect01(left: 0.4, top: 0.4, right: 0.45, bottom: 0.45),
+            rect: Rect01(left: 0.4, top: 0.4, right: 0.45, bottom: 0.45),
             label: 'small', confidence: 0.9,
           ),
           const ObjectBox(
-            rect: const Rect01(left: 0.2, top: 0.2, right: 0.8, bottom: 0.8),
+            rect: Rect01(left: 0.2, top: 0.2, right: 0.8, bottom: 0.8),
             label: 'big', confidence: 0.9,
           ),
         ]),
@@ -106,11 +105,11 @@ void main() {
       final advice = engine.evaluate(
         resultOf(
           faces: [
-            const FaceBox(rect: const Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7)),
+            const FaceBox(rect: Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7)),
           ],
           objects: [
             const ObjectBox(
-              rect: const Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7),
+              rect: Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7),
               label: 'person', confidence: 0.9,
             ),
           ],
