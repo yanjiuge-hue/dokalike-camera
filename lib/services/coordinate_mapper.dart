@@ -17,8 +17,7 @@ import '../models/detection_result.dart';
 ///
 /// 构图引擎/引导层只见归一化坐标，绝不直接接触 CameraImage。
 class CoordinateMapper {
-  CoordinateMapper({cam.CameraDescription? description})
-      : description = description;
+  CoordinateMapper({this.description});
 
   cam.CameraDescription? description;
 

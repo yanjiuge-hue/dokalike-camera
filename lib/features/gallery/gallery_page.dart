@@ -80,11 +80,14 @@ class _GalleryPageState extends ConsumerState<GalleryPage> {
 
   /// 打开大图查看页（传入全量列表，支持左右滑动切换）。
   Future<void> _openViewer(BuildContext context, Photo photo) async {
+    // 先把 Navigator 在 await 之前取出，避免跨异步间隙再使用 BuildContext
+    // （use_build_context_synchronously）。await 后仍需 mounted 兜底。
+    final navigator = Navigator.of(context);
     final all = await ref.read(galleryProvider.notifier).allPhotos();
     if (!mounted) return;
     final index = all.indexWhere((p) => p.id == photo.id);
     if (index < 0) return;
-    await Navigator.of(context).push(
+    await navigator.push(
       MaterialPageRoute<void>(
         builder: (context) => PhotoViewerPage(
           photos: all,

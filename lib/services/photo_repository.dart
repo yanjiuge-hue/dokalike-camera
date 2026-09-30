@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:gal/gal.dart';
-import 'package:hive/hive.dart';
 // 修正：Box.listenable() 不是 hive 核心库的方法，而是 hive_flutter 提供的
 // 扩展方法（ValueListenable<BoxEvent>）。少了这条 import 会报
 // "The method 'listenable' isn't defined for the type 'Box'"。

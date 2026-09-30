@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dokalike_camera/core/constants/app_constants.dart';
 import 'package:dokalike_camera/core/utils/geometry.dart';
 import 'package:dokalike_camera/features/composition/engine/composition_engine.dart';
 import 'package:dokalike_camera/features/composition/engine/rule_golden_ratio.dart';
@@ -53,7 +52,7 @@ void main() {
       final engine = CompositionEngine();
       final advice = engine.evaluate(
         resultOf(objects: [
-          ObjectBox(
+          const ObjectBox(
             rect: const Rect01(left: 0.25, top: 0.25, right: 0.75, bottom: 0.75),
             label: 'person', confidence: 0.9,
           ),
@@ -68,7 +67,7 @@ void main() {
       // 水平 + 良好主体 → 应为好构图
       final advice = engine.evaluate(
         resultOf(objects: [
-          ObjectBox(
+          const ObjectBox(
             rect: const Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7),
             label: 'person', confidence: 0.9,
           ),
@@ -86,11 +85,11 @@ void main() {
       // 小物体 + 大物体：主体应是大物体
       final advice = engine.evaluate(
         resultOf(objects: [
-          ObjectBox(
+          const ObjectBox(
             rect: const Rect01(left: 0.4, top: 0.4, right: 0.45, bottom: 0.45),
             label: 'small', confidence: 0.9,
           ),
-          ObjectBox(
+          const ObjectBox(
             rect: const Rect01(left: 0.2, top: 0.2, right: 0.8, bottom: 0.8),
             label: 'big', confidence: 0.9,
           ),
@@ -107,10 +106,10 @@ void main() {
       final advice = engine.evaluate(
         resultOf(
           faces: [
-            FaceBox(rect: const Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7)),
+            const FaceBox(rect: const Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7)),
           ],
           objects: [
-            ObjectBox(
+            const ObjectBox(
               rect: const Rect01(left: 0.3, top: 0.3, right: 0.7, bottom: 0.7),
               label: 'person', confidence: 0.9,
             ),
@@ -307,10 +306,6 @@ void main() {
 
   group('HorizonRule', () {
     final rule = HorizonRule();
-    const baseMeta = FrameMeta(
-      width: 100, height: 100, quarterTurns: 0,
-      isFrontCamera: false, previewAspect: 1,
-    );
 
     test('完全水平（0°）：满分', () {
       final ctx = EvalContext(

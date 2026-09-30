@@ -95,23 +95,55 @@ iOS **无法**在 GitHub Actions 的免费 ubuntu runner 上构建（必须 macO
 
 ## 五、APK 签名说明
 
-当前 workflow 用 **debug 签名**（模板默认），APK 可安装可运行，但不适合上架应用商店。
+`android/app/build.gradle` 实现了**「无密钥也能构建」**的签名策略：
 
-正式发布需自备 keystore：
+- 四项签名配置齐全 → 用 release 正式签名（可上架）
+- 任意一项缺失 → 自动回退 debug 签名（可安装自测，不可上架）
 
-1. 本机生成 keystore（需要 JDK 的 keytool）：
-   ```bash
-   keytool -genkey -v -keystore dokalike.keystore -alias dokalike \
-     -keyalg RSA -keysize 2048 -validity 10000
-   ```
-2. 把 `dokalike.keystore` 放到 `android/app/` 下
-3. 在 GitHub 仓库 **Settings → Secrets and variables → Actions** 添加：
-   - `ANDROID_KEYSTORE_PATH` = `app/dokalike.keystore`
-   - `ANDROID_KEY_ALIAS` = `dokalike`
-   - `ANDROID_STORE_PASSWORD` = 你的密码
-   - `ANDROID_KEY_PASSWORD` = 你的密码
-4. 把 keystore 文件提交到仓库（或用 base64 存 secret 更安全）
-5. `build.gradle` 已读这些环境变量，重新构建即用正式签名
+构建时会在日志里打印一行 `[signing] ...`，一眼就能看出用的是哪把钥匙。
+
+### 5.1 配置方式（任选其一，环境变量优先）
+
+**方式 A：本地 —— `android/key.properties`**（已在 `.gitignore` 中，不会入库）
+
+```properties
+storeFile=/abs/path/to/upload-keystore.jks
+storePassword=***
+keyAlias=dokalike
+keyPassword=***
+```
+
+**方式 B：CI —— GitHub Secrets**
+
+在仓库 **Settings → Secrets and variables → Actions** 添加 4 个 Secret：
+
+| Secret | 说明 |
+|--------|------|
+| `ANDROID_KEYSTORE_PATH` | keystore 路径（CI 上建议放 `app/dokalike.keystore`） |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore 密码 |
+| `ANDROID_KEY_ALIAS` | 别名 |
+| `ANDROID_KEY_PASSWORD` | 别名对应私钥密码 |
+
+### 5.2 生成 keystore
+
+```bash
+keytool -genkey -v -keystore dokalike.keystore -alias dokalike \
+  -keyalg RSA -keysize 2048 -validity 10000
+```
+
+### 5.3 ⚠️ 安全约定
+
+- **keystore / 密码一律不入库**：`.gitignore` 已忽略 `*.keystore`、`*.jks`、
+  `key.properties`，提交前请确认 `git status` 里没有这些文件。
+- 需要在 CI 上用密钥时，推荐把 keystore **base64 编码后存 Secret**，构建前解码，
+  而不是直接把二进制文件放进仓库：
+  ```bash
+  # 本机：编码
+  base64 -w 0 dokalike.keystore > keystore.b64
+  # CI：解码（示例，按需加到 workflow）
+  echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/dokalike.keystore
+  ```
+- 当前仓库**尚未配置任何密钥**，因此每次构建都是 debug 签名回退，属预期行为。
 
 ---
 

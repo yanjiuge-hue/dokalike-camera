@@ -100,11 +100,11 @@ class _SettingsSheet extends ConsumerWidget {
                 style: TextStyle(fontSize: 12, color: Colors.white38),
               ),
             ),
-            ListTile(
+            const ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('版本'),
-              trailing: const Text('v1.0.0',
-                  style: TextStyle(color: Colors.white38)),
+              title: Text('版本'),
+              trailing: Text('v1.0.0',
+                  style: const TextStyle(color: Colors.white38)),
             ),
           ],
         ),

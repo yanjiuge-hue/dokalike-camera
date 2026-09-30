@@ -29,7 +29,6 @@ const List<String> _forbiddenPatterns = [
 void main() {
   test('纯逻辑模块零平台依赖（禁止 flutter/camera/dart:io import）', () {
     final violations = <String>[];
-    final root = Directory('.');
 
     for (final dirPath in _guardedDirs) {
       final dir = Directory(dirPath);

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/camera_provider.dart';
-import '../../providers/composition_provider.dart';
 import '../../providers/filter_provider.dart';
 import '../../providers/service_providers.dart';
 import '../../providers/settings_provider.dart';
@@ -58,7 +57,7 @@ class _CameraPageState extends ConsumerState<CameraPage> {
             ),
 
           // ===== 顶部状态栏（P0-10）=====
-          Align(
+          const Align(
             alignment: Alignment.topCenter,
             child: TopBar(),
           ),

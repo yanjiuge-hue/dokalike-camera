@@ -32,7 +32,7 @@ class FilterCatalog {
   static final FilterPreset original = FilterPreset(
     id: 'original',
     name: '原图',
-    matrix4x5: [
+    matrix4x5: const [
       1, 0, 0, 0, 0, //
       0, 1, 0, 0, 0, //
       0, 0, 1, 0, 0, //
@@ -46,7 +46,7 @@ class FilterCatalog {
   static final FilterPreset tealDawn = FilterPreset(
     id: 'teal_dawn',
     name: '晨雾',
-    matrix4x5: [
+    matrix4x5: const [
       0.92, 0.02, 0.06, 0, -0.01, //
       0.02, 0.98, 0.05, 0, 0.01, //
       0.06, 0.05, 1.05, 0, 0.02, //
@@ -60,7 +60,7 @@ class FilterCatalog {
   static final FilterPreset street200 = FilterPreset(
     id: 'street_200',
     name: '街拍 200',
-    matrix4x5: [
+    matrix4x5: const [
       1.15, 0.05, -0.05, 0, -0.06, //
       0.05, 1.10, -0.02, 0, -0.05, //
       -0.05, -0.02, 1.05, 0, -0.03, //
@@ -74,7 +74,7 @@ class FilterCatalog {
   static final FilterPreset warmSun = FilterPreset(
     id: 'warm_sun',
     name: '暖阳',
-    matrix4x5: [
+    matrix4x5: const [
       1.10, 0.05, -0.02, 0, 0.05, //
       0.03, 1.00, 0.00, 0, 0.02, //
       -0.02, 0.00, 0.88, 0, 0.03, //
@@ -88,7 +88,7 @@ class FilterCatalog {
   static final FilterPreset nightPort = FilterPreset(
     id: 'night_port',
     name: '夜港',
-    matrix4x5: [
+    matrix4x5: const [
       0.95, 0.00, 0.05, 0, -0.04, //
       0.02, 1.00, 0.05, 0, -0.02, //
       0.10, 0.08, 1.10, 0, -0.02, //
@@ -102,7 +102,7 @@ class FilterCatalog {
   static final FilterPreset agfaSoft = FilterPreset(
     id: 'agfa_soft',
     name: '柔调',
-    matrix4x5: [
+    matrix4x5: const [
       0.92, 0.06, 0.04, 0, 0.06, //
       0.05, 0.92, 0.05, 0, 0.05, //
       0.04, 0.05, 0.94, 0, 0.05, //
@@ -116,7 +116,7 @@ class FilterCatalog {
   static final FilterPreset fujiGreen = FilterPreset(
     id: 'fuji_green',
     name: '青野',
-    matrix4x5: [
+    matrix4x5: const [
       0.95, 0.04, 0.03, 0, -0.02, //
       0.04, 1.05, 0.03, 0, 0.02, //
       0.02, 0.06, 1.00, 0, 0.00, //
@@ -130,7 +130,7 @@ class FilterCatalog {
   static final FilterPreset kodakGold = FilterPreset(
     id: 'kodak_gold',
     name: '金岸',
-    matrix4x5: [
+    matrix4x5: const [
       1.12, 0.02, -0.04, 0, 0.03, //
       0.04, 1.05, -0.01, 0, 0.01, //
       -0.01, 0.02, 0.92, 0, 0.04, //
@@ -144,7 +144,7 @@ class FilterCatalog {
   static final FilterPreset monoFilm = FilterPreset(
     id: 'mono_film',
     name: '墨影',
-    matrix4x5: [
+    matrix4x5: const [
       0.40, 0.42, 0.14, 0, -0.02, //
       0.40, 0.42, 0.14, 0, -0.02, //
       0.40, 0.42, 0.14, 0, -0.01, //

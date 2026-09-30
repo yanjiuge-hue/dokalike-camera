@@ -29,6 +29,9 @@
 *.tmp
 coverage/
 
+# AI 模型（~4MB 二进制，构建前由 scripts/fetch_model.sh 现取，勿入库）
+assets/models/*.tflite
+
 # 密钥（正式签名用，勿入库）
 *.keystore
 *.jks

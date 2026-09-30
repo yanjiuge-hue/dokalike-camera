@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
 import '../models/photo.dart';
-import '../services/photo_repository.dart';
 import 'service_providers.dart';
 
 /// 相册状态（P1-4：网格浏览、分页懒加载、删除可撤销）。

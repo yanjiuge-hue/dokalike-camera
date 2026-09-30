@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:isolate';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -54,6 +53,11 @@ class FramePayload {
 ///
 /// tflite_flutter 为 FFI 实现，可在后台 Isolate 直接运行（不依赖平台通道）。
 class InferenceIsolate {
+  /// 模型输入边长（SSD MobileNet V1 量化版为 300×300）。
+  ///
+  /// 与 assets/models/README.md 的契约一致；若更换模型需同步修改。
+  static const int inputSize = 300;
+
   Isolate? _isolate;
   SendPort? _sendPort;
   ReceivePort? _receivePort;
@@ -157,7 +161,7 @@ class InferenceIsolate {
 
   void _onMessage(Object? message) {
     if (message is! Map) return;
-    final map = Map<String, dynamic>.from(message as Map);
+    final map = Map<String, dynamic>.from(message);
     switch (map['type'] as String?) {
       case 'ready':
         _sendPort = map['sendPort'] as SendPort?;
@@ -219,7 +223,7 @@ class InferenceIsolate {
 
     port.listen((rawMessage) {
       if (rawMessage is! Map) return;
-      final message = Map<String, dynamic>.from(rawMessage as Map);
+      final message = Map<String, dynamic>.from(rawMessage);
       try {
         switch (message['type'] as String?) {
           case 'init':
@@ -227,6 +231,9 @@ class InferenceIsolate {
             interpreter = Interpreter.fromBuffer(
               message['modelBytes'] as Uint8List,
             );
+            // 打印模型张量契约，便于在 CI / 真机日志里核对模型是否匹配
+            // 期望：输入 1×300×300×3；输出 4 个张量（固定顺序）
+            _logModelContract(interpreter);
             mainSendPort.send(<String, dynamic>{'type': 'initDone'});
           case 'detect':
             if (paused || interpreter == null) {
@@ -259,6 +266,47 @@ class InferenceIsolate {
     });
   }
 
+  /// 打印模型的输入/输出张量形状与类型，用于核对模型契约。
+  ///
+  /// 期望契约（见 assets/models/README.md）：
+  /// - 输入 0：`1 × 300 × 300 × 3`，uint8 或 float32
+  /// - 输出 0：`1 × N × 4`  检测框
+  /// - 输出 1：`1 × N`      类别 id
+  /// - 输出 2：`1 × N`      置信度
+  /// - 输出 3：`1`          有效检测数
+  ///
+  /// 只使用 `getInputTensor(int)` / `getOutputTensor(int)` 这两个确定的 API
+  /// （输出张量个数未知，逐下标试探直到越界抛错为止）。
+  static void _logModelContract(Interpreter interpreter) {
+    try {
+      final sb = StringBuffer('[TFLite] 模型契约：');
+      final in0 = interpreter.getInputTensor(0);
+      sb.write(' 输入[0] shape=${in0.shape} type=${in0.type}');
+
+      var outCount = 0;
+      for (var i = 0; i < 8; i++) {
+        try {
+          final t = interpreter.getOutputTensor(i);
+          sb.write(' 输出[$i] shape=${t.shape} type=${t.type}');
+          outCount++;
+        } catch (_) {
+          break; // 越界即说明输出张量到此为止
+        }
+      }
+
+      final s = in0.shape;
+      if (s.length != 4 || s[1] != inputSize || s[2] != inputSize || s[3] != 3) {
+        sb.write(' [警告] 输入形状与期望的 1×$inputSize×$inputSize×3 不一致！');
+      }
+      if (outCount != 4) {
+        sb.write(' [警告] 输出张量数量为 $outCount（期望 4），解析结果可能错位！');
+      }
+      debugPrint(sb.toString());
+    } catch (e) {
+      debugPrint('[TFLite] 读取模型契约失败: $e');
+    }
+  }
+
   /// 执行一次物体检测（后台 Isolate 内）。
   ///
   /// 输出 objects 的坐标为**旋转校正后（竖直方向）的归一化坐标**，
@@ -274,7 +322,6 @@ class InferenceIsolate {
     final quarterTurns = payload['quarterTurns'] as int;
 
     // 1) resize 到模型输入 300×300（最近邻；归一化坐标在均匀缩放下不变）
-    const inputSize = 300;
     final isUint8 =
         interpreter.getInputTensor(0).type == TensorType.uint8;
     final input = isUint8
@@ -350,7 +397,7 @@ class InferenceIsolate {
       final score = (scores[0][i] as num).toDouble();
       if (score < AppConstants.objectConfidenceThreshold) continue;
 
-      final box = boxes[0][i] as List<double>;
+      final box = boxes[0][i];
       // SSD 输出顺序：ymin / xmin / ymax / xmax（归一化，传感器方向）
       var rect = Rect01.fromLTWH(box[1], box[0], box[3] - box[1], box[2] - box[0]);
       // 旋转校正到竖直方向（纯函数，位于 geometry.dart）

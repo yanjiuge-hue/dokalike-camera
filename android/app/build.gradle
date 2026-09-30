@@ -80,13 +80,68 @@ android {
     //   "Configuration conflict: ABI '...' in ndk abi cannot appear in ABI splits"
     // 拆分由 workflow 中的 `flutter build apk --release --split-per-abi` 完成。
 
+    // ---- Release 签名（可选，缺省自动回退 debug 签名）----
+    //
+    // 设计原则：**没有密钥也一定能构建成功**。
+    // 密钥绝不入库（.gitignore 已忽略 *.keystore / *.jks / key.properties），
+    // 因此这里按两级优先级读取，读不到就回退到 debug 签名：
+    //   ① android/key.properties（本地开发，key.properties 已 gitignore）
+    //        storeFile=/abs/path/to/upload-keystore.jks
+    //        storePassword=***
+    //        keyAlias=upload
+    //        keyPassword=***
+    //   ② 环境变量（CI / GitHub Secrets，见 BUILD_GUIDE.md 第五节）
+    //        ANDROID_KEYSTORE_PATH      同 storeFile
+    //        ANDROID_KEYSTORE_PASSWORD  同 storePassword
+    //        ANDROID_KEY_ALIAS          同 keyAlias
+    //        ANDROID_KEY_PASSWORD       同 keyPassword
+    // 四项缺一即视为「未配置」，走 debug 签名。
+    //
     // ⚠️ 不要自定义 signingConfigs.debug。
-    // Android Gradle Plugin 会自动创建 debug signingConfig 并指向
-    // ~/.android/debug.keystore（不存在时自动生成一个）。
-    // 此前这里写了 storeFile file('debug.keystore')，但仓库里并没有该文件，
-    // 导致 Gradle 在签名阶段直接失败（这是 CI 构建失败的第二个原因）。
-    // 正式发布签名请见 BUILD_GUIDE.md 第五节：新建 release signingConfig
-    // 并读取环境变量中的 keystore 路径与密码。
+    // AGP 会自动创建 debug signingConfig 并指向 ~/.android/debug.keystore
+    // （不存在时自动生成一个）。此前这里写了 storeFile file('debug.keystore')，
+    // 但仓库里并没有该文件，导致 Gradle 在签名阶段直接失败。
+    def keystorePropsFile = rootProject.file("key.properties")
+    def keystoreProps = new Properties()
+    if (keystorePropsFile.exists()) {
+        keystoreProps.load(new FileInputStream(keystorePropsFile))
+    }
+    // 环境变量优先于 key.properties，方便 CI 用 Secrets 覆盖本地配置
+    def pick = { String envKey, String propKey ->
+        def v = System.getenv(envKey)
+        if (v == null || v.trim().isEmpty()) {
+            v = keystoreProps.getProperty(propKey)
+        }
+        return (v == null || v.trim().isEmpty()) ? null : v.trim()
+    }
+    def ksPath = pick("ANDROID_KEYSTORE_PATH", "storeFile")
+    def ksStorePassword = pick("ANDROID_KEYSTORE_PASSWORD", "storePassword")
+    def ksAlias = pick("ANDROID_KEY_ALIAS", "keyAlias")
+    def ksKeyPassword = pick("ANDROID_KEY_PASSWORD", "keyPassword")
+    def useReleaseSigning = ksPath != null && ksStorePassword != null &&
+            ksAlias != null && ksKeyPassword != null
+
+    // 打印一次签名策略，方便在 CI 日志里一眼确认用的是哪把钥匙
+    // （V1/V2 由 AGP 按 minSdk 自动决定：minSdk 23 < 24，两者都会启用，无需手配）
+    if (useReleaseSigning) {
+        println "[signing] release 使用正式签名：${ksPath} (alias=${ksAlias})"
+    } else {
+        println "[signing] release 未配置正式密钥，回退 debug 签名（仅供自测，不可上架）"
+    }
+
+    signingConfigs {
+        // 仅在密钥齐全时才创建 release 配置：否则会留下一个 storeFile 为空的
+        // 签名配置，AGP 校验阶段可能报 "Keystore file not set for signing
+        // config 'release'"。不创建就不会被任何 variant 引用。
+        if (useReleaseSigning) {
+            release {
+                storeFile = file(ksPath)
+                storePassword = ksStorePassword
+                keyAlias = ksAlias
+                keyPassword = ksKeyPassword
+            }
+        }
+    }
 
     buildTypes {
         release {
@@ -95,8 +150,9 @@ android {
             // 待基础构建跑通后再单独开启并补充 proguard-rules.pro 验证。
             minifyEnabled false
             shrinkResources false
-            // release 默认使用 AGP 自动生成的 debug 签名，保证可安装可运行
-            signingConfig signingConfigs.debug
+            // 有正式密钥则用 release 签名；否则回退 debug 签名（仍可安装运行，
+            // 只是不能上架应用商店）。
+            signingConfig = useReleaseSigning ? signingConfigs.release : signingConfigs.debug
         }
     }
 }

@@ -1,4 +1,5 @@
 /// 全局枚举定义（纯 Dart，零平台依赖）。
+library;
 
 /// 闪光灯三态：自动 / 开 / 关
 enum FlashMode3 { auto, on, off }

@@ -158,7 +158,7 @@ class _CompositionPainter extends CustomPainter {
     final angle = advice?.horizonAngle ?? 0;
     final isLevel = angle.abs() <= 2.0;
     final barWidth = size.width * 0.3;
-    final trackY = 64.0;
+    const trackY = 64.0;
     final center = Offset(size.width / 2, trackY);
 
     // 轨道
@@ -231,7 +231,7 @@ class _CompositionPainter extends CustomPainter {
     canvas.drawLine(start, end, paint);
 
     // 箭头两翼
-    final wingAngle = 0.5; // 弧度
+    const wingAngle = 0.5; // 弧度
     final base = -dir;
     for (final sign in [1.0, -1.0]) {
       final wx = base.dx * 6 * 1.2 + (base.dy * sign * 6 * 1.2) * 0;

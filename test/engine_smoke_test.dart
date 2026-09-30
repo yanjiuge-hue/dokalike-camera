@@ -11,7 +11,6 @@ import 'package:dokalike_camera/features/filters/engine/color_matrix.dart';
 import 'package:dokalike_camera/features/filters/engine/filter_recommender.dart';
 import 'package:dokalike_camera/models/detection_result.dart';
 import 'package:dokalike_camera/models/enums.dart';
-import 'package:dokalike_camera/models/filter_preset.dart';
 
 /// 纯逻辑引擎冒烟测试（QA 后续在此基础上补全覆盖）。
 void main() {
@@ -150,7 +149,7 @@ void main() {
   });
 
   group('CompositionEngine', () {
-    final meta = const FrameMeta(
+    const meta = FrameMeta(
       width: 1080,
       height: 1920,
       quarterTurns: 1,
@@ -189,7 +188,7 @@ void main() {
       final engine = CompositionEngine();
       final advice = engine.evaluate(
         resultOf(objects: [
-          ObjectBox(
+          const ObjectBox(
             rect: const Rect01(
                 left: 0.45, top: 0.4, right: 0.55, bottom: 0.5),
             label: 'person',
@@ -206,7 +205,7 @@ void main() {
       final engine = CompositionEngine();
       final advice = engine.evaluate(
         resultOf(objects: [
-          ObjectBox(
+          const ObjectBox(
             rect: const Rect01(
                 left: 0.25, top: 0.25, right: 0.75, bottom: 0.75),
             label: 'person',
