@@ -78,33 +78,62 @@ flutter test
 
 ## 模型文件与 LUT 放置位置
 
-### 物体检测模型（必需，否则降级为仅人脸检测）
+### 物体检测模型（不入库，构建前自动获取）
 
-下载 **SSD MobileNet V1 量化版（COCO，TFLite）**：
+模型是 ~4MB 的二进制，**不进版本库**（`.gitignore` 已排除
+`assets/models/*.tflite`），两条获取途径：
 
-1. 打开 TensorFlow Object Detection 模型库：
-   <https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md>
-2. 下载 *SSD MobileNet v1 quantized* 的 TFLite 压缩包（Apache-2.0 授权）
-3. 解压后将 `*.tflite` 重命名为 `ssd_mobilenet_v1_quant.tflite`，放入：
+- **云端构建（GitHub Actions，推荐）**：workflow 的「准备 AI 检测模型」
+  步骤会自动执行 `scripts/fetch_model.sh`。脚本下载后做**双重校验**——
+  体积下限 ≥3MB（量化版实际 4,183,312 bytes）+ 文件头必须是 `TFL3`，
+  校验通过才落位到 `assets/models/`。**全程无需人工干预。**
+- **本地开发**：仓库根目录执行
+
+  ```bash
+  bash scripts/fetch_model.sh            # 已存在则跳过
+  bash scripts/fetch_model.sh --force    # 强制重新下载
+  ```
+
+落位后的两个文件（`labels.txt` 已内置，COCO 91 槽位标签表）：
 
 ```
 assets/models/ssd_mobilenet_v1_quant.tflite
-assets/models/labels.txt          # 已内置（COCO 91 槽位标签表）
+assets/models/labels.txt
 ```
 
 模型输出约定（`InferenceIsolate` 按此解析）：输入 `1×300×300×3`
 （uint8 / float32 自动适配）；输出 4 张量顺序为
 `detection_boxes [1,N,4]`、`detection_classes [1,N]`、
 `detection_scores [1,N]`、`num_detections [1]`。
+运行时会打印一行 `[TFLite] 模型契约：...`（含各张量的形状与类型）；
+形状与上述约定不符时会输出警告，可在真机日志里据此核对模型是否匹配。
 
 **模型缺失时的行为**：App 不崩溃，构图辅助自动降级为「仅 ML Kit 人脸
 检测」模式（日志提示）。
 
-### LUT（可选精修资源）
+> 产物校验：CI 的「APK 交付前自检」步骤会用 `unzip -l` 断言
+> `assets/flutter_assets/assets/models/ssd_mobilenet_v1_quant.tflite`
+> 与 `labels.txt` 确实打进了 APK，缺任一即让该步骤失败。
 
-8 款滤镜对应的 LUT PNG 放入 `assets/luts/`（文件名见该目录 README）。
-MVP 采用 **256×1 的 1D 色调条**格式；文件缺失时滤镜仅由 4×5 颜色矩阵
-实现，预览与落盘仍保持一致。
+### LUT（可选精修资源，当前未提供 —— 启用前必读）
+
+8 款滤镜对应的 8 个 LUT PNG **目前一个都没有提供**，`assets/luts/` 下
+只有 README。因此当前滤镜走的是**纯颜色矩阵路径**：预览
+`ColorFiltered(matrixAt(strength))` 与落盘 `FilterPipeline.applyToBytes`
+共用同一矩阵结果，**预览与成片完全一致**。
+
+LUT 只是可选的精修资源：只有当你把 PNG 放进 `assets/luts/`
+（文件名见该目录 README，MVP 采用 **256×1 的 1D 色调条**格式）后，
+落盘管线才会按 `AppConstants.lutBlendWeight (0.4) × strength` 的权重
+把 LUT 与矩阵结果混合。
+
+> ⚠️ **启用 LUT 会破坏「所见即所得」**
+>
+> LUT 目前**只在落盘时生效**——预览端是纯颜色矩阵，完全不采样 LUT。
+> 也就是说，一旦放入 LUT 文件，预览（弱）与成片（强）就会出现偏差。
+> 若要启用 LUT，必须同步改造预览端（例如用 `FragmentProgram` 写 GLSL
+> shader，对预览纹理采样同一张 LUT，混合权重与落盘端保持一致），
+> 否则请不要往 `assets/luts/` 放任何 PNG。
 
 ## tflite_flutter 双端配置注意事项
 

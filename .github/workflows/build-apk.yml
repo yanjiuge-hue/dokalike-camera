@@ -480,6 +480,228 @@ jobs:
           echo "BUILD_EXIT_CODE=${code}"
           exit $code
 
+      # 10.2) ★ APK 交付前自检（交付门禁）★
+      #
+      # 为什么要有这一步：构建成功 ≠ 产物可用。「模型没打进包里」「原生库缺
+      # 某个 ABI」这类问题只有装到真机上才会暴露，CI 与构建日志都是绿的。
+      # 这里在交付前对着 build/app/outputs/flutter-apk/*.apk 做一次静态体检：
+      #   1) aapt / aapt2 dump badging → 包名、versionCode/versionName、
+      #      minSdk(sdkVersion)、targetSdkVersion、声明的 uses-permission
+      #   2) unzip -l → 模型文件、标签表、TFLite 原生库是否真的进了包
+      #   3) 每个 APK 的字节大小与人类可读大小
+      #
+      # 严重级别（重要，避免误判）：
+      #   - 包内「必需条目」缺失            → 硬失败（交付门禁，必须暴露出来）
+      #   - aapt / aapt2 / unzip 工具缺失   → 环境问题，打印 ⚠ 后跳过该项校验，
+      #                                        绝不把环境问题算到产物头上
+      #   - 包名/版本/sdk 版本等元数据      → 参考项，打印 ✓/✗ 提示但不阻断
+      #                                       （aapt 与 aapt2 输出格式有差异，
+      #                                        硬拦会误伤）
+      #
+      # 日志文件名 11b-apk-inspect.log：后续「导出日志到 ci-logs 分支」步骤
+      # 是按 *.log 通配复制的，无需再登记文件名。
+      - name: APK 交付前自检
+        if: always()
+        run: |
+          LOG="${LOG_DIR}/11b-apk-inspect.log"
+          mkdir -p "${LOG_DIR}"
+
+          # 相等打印 ✓，不等打印 ✗（只影响日志可读性）
+          mark() {
+            if [ "$1" = "$2" ]; then echo "✓"; else echo "✗"; fi
+          }
+
+          run_inspect() {
+            APK_DIR="build/app/outputs/flutter-apk"
+            SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+
+            echo "===== APK 交付前自检 ====="
+            echo "时间     : $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "产物目录 : ${APK_DIR}"
+            echo "SDK      : ${SDK:-（ANDROID_HOME / ANDROID_SDK_ROOT 均未设置）}"
+            echo ""
+
+            # ---------- 0) 工具探测：优先 aapt，退化 aapt2，都没有就警告跳过 ----------
+            aapt_bin=""
+            aapt_kind=""
+            if [ -n "${SDK}" ]; then
+              for c in $(ls -1 "${SDK}"/build-tools/*/aapt 2>/dev/null | sort -r); do
+                if [ -x "$c" ]; then aapt_bin="$c"; aapt_kind="aapt"; break; fi
+              done
+              if [ -z "${aapt_bin}" ]; then
+                for c in $(ls -1 "${SDK}"/build-tools/*/aapt2 2>/dev/null | sort -r); do
+                  if [ -x "$c" ]; then aapt_bin="$c"; aapt_kind="aapt2"; break; fi
+                done
+              fi
+            fi
+            if [ -z "${aapt_bin}" ] && command -v aapt >/dev/null 2>&1; then
+              aapt_bin="$(command -v aapt)"; aapt_kind="aapt"
+            fi
+            if [ -z "${aapt_bin}" ] && command -v aapt2 >/dev/null 2>&1; then
+              aapt_bin="$(command -v aapt2)"; aapt_kind="aapt2"
+            fi
+
+            unzip_bin=""
+            if command -v unzip >/dev/null 2>&1; then unzip_bin="$(command -v unzip)"; fi
+
+            if [ -n "${aapt_bin}" ]; then
+              echo "工具 aapt  : ${aapt_bin}（${aapt_kind}）"
+            else
+              echo "工具 aapt  : 未找到 —— 跳过 badging 解析（环境缺失，不判为产物问题）"
+            fi
+            if [ -n "${unzip_bin}" ]; then
+              echo "工具 unzip : ${unzip_bin}"
+            else
+              echo "工具 unzip : 未找到 —— 跳过包内条目校验（环境缺失，不判为产物问题）"
+            fi
+            echo ""
+
+            # ---------- 1) 收集产物 ----------
+            if [ ! -d "${APK_DIR}" ]; then
+              echo "✗ 产物目录不存在：${APK_DIR}"
+              echo "  构建未产出任何 APK，请先看 11-build-apk.log 与 12-error-summary.log"
+              return 1
+            fi
+            first_apk="$(ls -1 "${APK_DIR}"/*.apk 2>/dev/null | head -n 1 || true)"
+            if [ -z "${first_apk}" ]; then
+              echo "✗ ${APK_DIR} 下没有找到任何 .apk"
+              return 1
+            fi
+
+            # 包内条目校验：命中则打印实际路径，未命中打印醒目 ✗ 并返回非 0。
+            # 依赖外部变量 entries（当前 APK 的条目清单）。
+            check_entry() {
+              desc="$1"
+              pattern="$2"
+              hit="$(printf '%s\n' "${entries}" | grep -E "${pattern}" | head -n 1 || true)"
+              if [ -n "${hit}" ]; then
+                echo "    ✓ ${desc}"
+                echo "        实际路径: ${hit}"
+                return 0
+              fi
+              echo "    ✗ ${desc} —— 包内缺失！"
+              return 1
+            }
+
+            count=0
+            failed=0
+            warned=0
+
+            for apk in "${APK_DIR}"/*.apk; do
+              [ -f "${apk}" ] || continue
+              count=$((count + 1))
+              fname="$(basename "${apk}")"
+              echo "----------------------------------------"
+              echo ">>> APK ${count}: ${fname}"
+
+              # ---- 体积 ----
+              bytes="$(stat -c '%s' "${apk}" 2>/dev/null || true)"
+              if [ -z "${bytes}" ]; then bytes="$(wc -c < "${apk}" | tr -d ' ')"; fi
+              human="$(awk -v b="${bytes}" 'BEGIN { printf "%.1f MB", b / 1048576 }')"
+              echo "  大小: ${bytes} bytes（${human}）"
+
+              # ---- ABI：从文件名 app-<abi>-release.apk 推断 ----
+              abi="$(printf '%s' "${fname}" | sed -n 's/^app-\([A-Za-z0-9_-]\+\)-release\.apk$/\1/p')"
+              if [ -z "${abi}" ]; then abi="unknown"; fi
+              echo "  ABI : ${abi}"
+
+              # ---------- 2) aapt / aapt2 dump badging ----------
+              if [ -z "${aapt_bin}" ]; then
+                warned=$((warned + 1))
+              else
+                badging="$("${aapt_bin}" dump badging "${apk}" 2>/dev/null || true)"
+                if [ -z "${badging}" ]; then
+                  echo "  ⚠ badging 无输出，跳过元数据解析"
+                  warned=$((warned + 1))
+                else
+                  pkg_line="$(printf '%s\n' "${badging}" | grep -m1 '^package:' || true)"
+                  # 注意：pkg_line 里还有 compileSdkVersionCodename='14'，
+                  # 用 sed 的贪婪 .* 会把 name= 匹配到最后一个去（实测取到 14），
+                  # 因此这里统一用 grep -o -m1 取「第一个」匹配项。
+                  p_name="$(printf '%s' "${pkg_line}" | grep -o -m1 "name='[^']*'" | head -n 1 | sed "s/^name='//; s/'$//")"
+                  p_code="$(printf '%s' "${pkg_line}" | grep -o -m1 "versionCode='[^']*'" | head -n 1 | sed "s/^versionCode='//; s/'$//")"
+                  p_vname="$(printf '%s' "${pkg_line}" | grep -o -m1 "versionName='[^']*'" | head -n 1 | sed "s/^versionName='//; s/'$//")"
+                  p_sdk="$(printf '%s\n' "${badging}" | grep -m1 '^sdkVersion:' | sed -n "s/.*'\([^']*\)'.*/\1/p" || true)"
+                  p_target="$(printf '%s\n' "${badging}" | grep -m1 '^targetSdkVersion:' | sed -n "s/.*'\([^']*\)'.*/\1/p" || true)"
+                  echo "  [badging] 参考项（期望 package=com.dokalike.dokalike_camera / versionCode=1 / versionName=1.0.0 / minSdk=23 / targetSdk=34）"
+                  echo "    package           : ${p_name} $(mark "${p_name}" "com.dokalike.dokalike_camera")"
+                  echo "    versionCode       : ${p_code} $(mark "${p_code}" "1")"
+                  echo "    versionName       : ${p_vname} $(mark "${p_vname}" "1.0.0")"
+                  echo "    sdkVersion(minSdk): ${p_sdk} $(mark "${p_sdk}" "23")"
+                  echo "    targetSdkVersion  : ${p_target} $(mark "${p_target}" "34")"
+                  echo "    uses-permission:"
+                  perms="$(printf '%s\n' "${badging}" | grep -E '^uses-permission:' | sed -n "s/.*name='\([^']*\)'.*/\1/p" | sort || true)"
+                  if [ -n "${perms}" ]; then
+                    printf '%s\n' "${perms}" | sed 's/^/      - /'
+                  else
+                    echo "      （未解析到 uses-permission；aapt2 输出格式与 aapt 略有差异时会出现）"
+                  fi
+                fi
+              fi
+
+              # ---------- 3) unzip -l 包内条目校验 ----------
+              if [ -z "${unzip_bin}" ]; then
+                echo "  ⚠ unzip 不可用，跳过包内条目校验"
+                warned=$((warned + 1))
+                continue
+              fi
+
+              listing="$("${unzip_bin}" -l "${apk}" 2>/dev/null || true)"
+              # unzip -l 行格式：<长度> <日期> <时间> <名称>。名称可能含空格，
+              # 因此去掉前 3 个字段后把整行剩余部分作为条目名。
+              entries="$(printf '%s\n' "${listing}" | awk 'NF>=4 && $1 ~ /^[0-9]+$/ { $1=""; $2=""; $3=""; sub(/^ +/, ""); print }')"
+              echo "  包内条目数: $(printf '%s\n' "${entries}" | grep -c . || true)"
+
+              echo "  必需条目校验（路径以包内实际输出为准）："
+              ok=1
+              # Flutter 会把 pubspec 声明的 assets 原样打进 assets/flutter_assets/
+              # 下面；这里用「结尾匹配」而非写死前缀，前缀变化也不会误报，
+              # 且日志会打印实际路径便于核对。
+              check_entry "TFLite 检测模型 ssd_mobilenet_v1_quant.tflite" '(^|/)assets/models/ssd_mobilenet_v1_quant\.tflite$' || ok=0
+              check_entry "标签表 labels.txt" '(^|/)assets/models/labels\.txt$' || ok=0
+
+              abi_entries="$(printf '%s\n' "${entries}" | grep -E "^lib/${abi}/" || true)"
+              if [ -z "${abi_entries}" ]; then
+                echo "    ⚠ 包内没有 lib/${abi}/ 下的任何条目，跳过原生库校验"
+                echo "      （上游未分发该 ABI 的原生库，属上游/环境问题，不计为产物缺陷）"
+                warned=$((warned + 1))
+              else
+                check_entry "TFLite FFI 库 libtensorflowlite_c.so（${abi}）" "^lib/${abi}/libtensorflowlite_c\.so$" || ok=0
+                # 注意 + 在 ERE 里是量词，必须转义，否则 libc++_shared 匹配不到
+                check_entry "C++ 运行时 libc++_shared.so（${abi}）" "^lib/${abi}/libc\+\+_shared\.so$" || ok=0
+                echo "    -- lib/${abi} 实际条目清单 --"
+                printf '%s\n' "${abi_entries}" | sed 's/^/       /'
+              fi
+
+              if [ "${ok}" -ne 1 ]; then
+                failed=$((failed + 1))
+                echo "  ==> ${fname} 未通过必需条目校验"
+              fi
+            done
+
+            echo ""
+            echo "===== 自检汇总 ====="
+            echo "APK 数量         : ${count}"
+            echo "失败包数(硬门禁) : ${failed}"
+            echo "警告项(环境/上游): ${warned}"
+            if [ "${count}" -eq 0 ]; then
+              echo "✗ 没有可校验的 APK"
+              return 1
+            fi
+            if [ "${failed}" -gt 0 ]; then
+              echo "✗ APK 交付前自检未通过：${failed} 个包缺少必需条目（见上方 ✗ 标记）"
+              return 1
+            fi
+            echo "✓ APK 交付前自检通过：模型资源与原生库均已在包内"
+            return 0
+          }
+
+          run_inspect > "${LOG}" 2>&1
+          status=$?
+          cat "${LOG}"
+          echo "APK 交付前自检退出码 = ${status}"
+          exit ${status}
+
       # 10.5) 失败时打印 Gradle 报错摘要，写进日志便于远程查看
       - name: 提取 Gradle 报错摘要
         if: always()

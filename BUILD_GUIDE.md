@@ -160,7 +160,63 @@ keytool -genkey -v -keystore dokalike.keystore -alias dokalike \
 
 ---
 
-## 七、本机直接构建（可选）
+## 七、如何验证产物（推送后核对清单）
+
+**构建绿灯 ≠ 产物可用。** 推送后按下面四步在 Actions 页面核对。
+
+### 7.1 先看 `ci-logs` 分支的 `11b-apk-inspect.log`
+
+这是「APK 交付前自检」步骤的输出。健康的结果应包含：
+
+- 三个 APK 各自的 **包名**（`com.dokalike.dokalike_camera`）、
+  **versionCode / versionName**（`1` / `1.0.0`）、**minSdk**（`23`）、
+  **targetSdk**（`34`）以及声明的 **uses-permission** 列表
+- 每个包里的
+  `✓ assets/flutter_assets/assets/models/ssd_mobilenet_v1_quant.tflite`
+  与 `✓ assets/flutter_assets/assets/models/labels.txt`
+- arm64 包里的 `✓ lib/arm64-v8a/libtensorflowlite_c.so` 与
+  `✓ lib/arm64-v8a/libc++_shared.so`
+  （另两个包校验各自 ABI 目录下的同名库）
+- 三个 APK 的字节大小与 MB 数
+
+任一项打 `✗` → 该步骤直接失败，说明产物缺件，装到手机上会降级或崩溃。
+（包名/版本/sdk 这几项是**参考项**，只打标记不阻断，避免 aapt 与 aapt2
+输出格式差异造成误判。）
+
+> 该文件由「导出日志到 ci-logs 分支」步骤按 `*.log` 通配收集，
+> 因此会自动出现在 `ci-logs` 分支与 `ci-logs` 制品里。
+
+### 7.2 再看 `08c-model.log` 确认模型下载成功
+
+应看到类似一行：
+
+```
+  ✓ 已就位：.../assets/models/ssd_mobilenet_v1_quant.tflite（4183312 bytes）
+```
+
+若看到 `!! 下载失败` / `!! 模型体积异常（< 3MB）` / `!! 文件头不是 TFL3`，
+说明模型没拿到：App 会降级为仅人脸检测，且 7.1 的 APK 自检会同步失败。
+
+### 7.3 看 `11-build-apk.log` 里的 `[signing]` 一行
+
+形如（二选一）：
+
+```
+[signing] release 使用正式签名：<keystore 路径> (alias=...)   ← 配齐了 4 个 Secret / key.properties
+[signing] release 未配置正式密钥，回退 debug 签名（仅供自测，不可上架）
+```
+
+一眼确认这次产物用的是哪把钥匙，详见第五节。
+
+### 7.4 下载 APK artifact 需要登录 GitHub
+
+三个 APK 打包在 `dokalike-camera-apk` artifact 里。**匿名下载会返回 401**，
+必须先登录 GitHub 账号（免费账号即可）再点下载；或在仓库页面
+**Actions → 对应 run → Artifacts** 处下载。
+
+---
+
+## 八、本机直接构建（可选）
 
 如果你后来在本机装了 Flutter SDK + Android Studio：
 
@@ -174,7 +230,7 @@ flutter build apk --release # 构建 APK
 
 ---
 
-## 八、故障排查
+## 九、故障排查
 
 | 现象 | 原因 / 处理 |
 |------|-------------|
