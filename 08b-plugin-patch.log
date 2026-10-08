@@ -1,0 +1,56 @@
+===== 插件 android/build.gradle 补丁 =====
+扫描目录 : /home/runner/.pub-cache/hosted/pub.dev
+flutter  : Flutter 3.24.0 • channel stable • https://github.com/flutter/flutter.git
+
+[无需修补] /home/runner/.pub-cache/hosted/pub.dev/camera_android_camerax-0.6.10+3/android/build.gradle
+[修补] /home/runner/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.26/android/build.gradle
+  --- 替换前 ---
+    26:    compileSdk 35
+  --- 替换后 ---
+    26:    compileSdk 34
+[修补] /home/runner/.pub-cache/hosted/pub.dev/gal-2.3.3/android/build.gradle
+  --- 替换前 ---
+    18:    compileSdk flutter.compileSdkVersion
+  --- 替换后 ---
+    18:    compileSdk 34
+[修补] /home/runner/.pub-cache/hosted/pub.dev/google_mlkit_commons-0.11.0/android/build.gradle
+  --- 替换前 ---
+    27:    compileSdk = 35
+  --- 替换后 ---
+    27:    compileSdk 34
+[修补] /home/runner/.pub-cache/hosted/pub.dev/google_mlkit_face_detection-0.13.1/android/build.gradle
+  --- 替换前 ---
+    27:    compileSdk = 35
+  --- 替换后 ---
+    27:    compileSdk 34
+[无需修补] /home/runner/.pub-cache/hosted/pub.dev/path_provider_android-2.2.15/android/build.gradle
+[无需修补] /home/runner/.pub-cache/hosted/pub.dev/permission_handler_android-12.1.0/android/build.gradle
+[无需修补] /home/runner/.pub-cache/hosted/pub.dev/sensors_plus-6.1.2/android/build.gradle
+[无需修补] /home/runner/.pub-cache/hosted/pub.dev/share_plus-10.1.4/android/build.gradle
+[修补] /home/runner/.pub-cache/hosted/pub.dev/tflite_flutter-0.11.0/android/build.gradle
+  --- 替换前 ---
+    30:    compileSdkVersion 31
+  --- 替换后 ---
+    28:    // Bumping the plugin compileSdkVersion requires all clients of this plugin
+    30:    compileSdk 34
+
+扫描文件数 : 10
+修补文件数 : 5
+
+===== 关键插件最终 compileSdk =====
+  gal: /home/runner/.pub-cache/hosted/pub.dev/gal-2.3.3/android/build.gradle -> compileSdk34;
+  tflite_flutter: /home/runner/.pub-cache/hosted/pub.dev/tflite_flutter-0.11.0/android/build.gradle -> //BumpingtheplugincompileSdkVersionrequiresallclientsofthisplugin;compileSdk34;
+  flutter_plugin_android_lifecycle: /home/runner/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.26/android/build.gradle -> compileSdk34;
+
+===== 插件自带 Kotlin 版本对齐（1.6.x / 1.7.x → 1.8.22） =====
+[Kotlin 对齐] /home/runner/.pub-cache/hosted/pub.dev/sensors_plus-6.1.2/android/build.gradle
+    替换前: 5:    ext.kotlin_version = '1.7.22'
+    替换后: 5:    ext.kotlin_version = '1.8.22'
+[Kotlin 对齐] /home/runner/.pub-cache/hosted/pub.dev/share_plus-10.1.4/android/build.gradle
+    替换前: 5:    ext.kotlin_version = '1.7.22'
+    替换后: 5:    ext.kotlin_version = '1.8.22'
+对齐 Kotlin 版本的插件数 : 2
+
+===== 校验：是否还有未修补的旧写法 =====
+OK：插件 compileSdk 已全部对齐 34（无 flutter.compileSdkVersion / 31 / 35）
+OK：插件 ext.kotlin_version 已全部对齐 1.8.22

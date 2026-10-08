@@ -1,0 +1,39 @@
+SDK dir = /usr/local/lib/android/sdk
+sdkmanager 不在 PATH 中，跳过
+-- 补齐后的 platforms --
+android-34
+android-34-ext10
+android-34-ext11
+android-34-ext12
+android-34-ext8
+android-35
+android-35-ext14
+android-35-ext15
+android-36
+android-36-ext18
+android-36-ext19
+android-36.1
+android-37.0
+android-37.1
+android-37.2
+android-37.2-beta1
+android-37.2-beta2
+android-37.2-beta3
+-- 补齐后的 build-tools --
+34.0.0
+35.0.0
+35.0.1
+36.0.0
+36.1.0
+37.0.0
+-- android.jar 完整性（aapt2 报 'Failed to load resources table' 时先看这里）--
+  android-33: 未安装
+  android-34: 26361808 bytes
+        testing: resources.arsc           OK
+    No errors detected in compressed data of /usr/local/lib/android/sdk/platforms/android-34/android.jar.
+  android-35: 27092450 bytes
+        testing: resources.arsc           OK
+    No errors detected in compressed data of /usr/local/lib/android/sdk/platforms/android-35/android.jar.
+  android-36: 27768026 bytes
+        testing: resources.arsc           OK
+    No errors detected in compressed data of /usr/local/lib/android/sdk/platforms/android-36/android.jar.

@@ -1,0 +1,119 @@
+===== APK 交付前自检 =====
+时间     : 2026-10-08T00:56:47Z
+产物目录 : build/app/outputs/flutter-apk
+SDK      : /usr/local/lib/android/sdk
+
+工具 aapt  : /usr/local/lib/android/sdk/build-tools/37.0.0/aapt（aapt）
+工具 unzip : /usr/bin/unzip
+
+----------------------------------------
+>>> APK 1: app-arm64-v8a-release.apk
+  大小: 46112957 bytes（44.0 MB）
+  ABI : arm64-v8a
+  [badging] 参考项（期望 package=com.dokalike.dokalike_camera / versionCode=1 / versionName=1.0.0 / minSdk=23 / targetSdk=34）
+    package           : com.dokalike.dokalike_camera ✓
+    versionCode       : 2001 ✗
+    versionName       : 1.0.0 ✓
+    sdkVersion(minSdk): 23 ✓
+    targetSdkVersion  : 34 ✓
+    uses-permission:
+      - android.permission.ACCESS_NETWORK_STATE
+      - android.permission.CAMERA
+      - android.permission.INTERNET
+      - android.permission.READ_EXTERNAL_STORAGE
+      - android.permission.RECORD_AUDIO
+      - android.permission.WRITE_EXTERNAL_STORAGE
+      - com.dokalike.dokalike_camera.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+  包内条目数: 537
+  必需条目校验（路径以包内实际输出为准）：
+    ✓ TFLite 检测模型 ssd_mobilenet_v1_quant.tflite
+        实际路径: assets/flutter_assets/assets/models/ssd_mobilenet_v1_quant.tflite
+    ✓ 标签表 labels.txt
+        实际路径: assets/flutter_assets/assets/models/labels.txt
+    ✗ TFLite FFI 库 libtensorflowlite_c.so（arm64-v8a） —— 包内缺失！
+    ✗ C++ 运行时 libc++_shared.so（arm64-v8a） —— 包内缺失！
+    -- lib/arm64-v8a 实际条目清单 --
+       lib/arm64-v8a/libapp.so
+       lib/arm64-v8a/libface_detector_v2_jni.so
+       lib/arm64-v8a/libflutter.so
+       lib/arm64-v8a/libimage_processing_util_jni.so
+       lib/arm64-v8a/libsurface_util_jni.so
+       lib/arm64-v8a/libtensorflowlite_gpu_jni.so
+       lib/arm64-v8a/libtensorflowlite_jni.so
+  ==> app-arm64-v8a-release.apk 未通过必需条目校验
+----------------------------------------
+>>> APK 2: app-armeabi-v7a-release.apk
+  大小: 38046779 bytes（36.3 MB）
+  ABI : armeabi-v7a
+  [badging] 参考项（期望 package=com.dokalike.dokalike_camera / versionCode=1 / versionName=1.0.0 / minSdk=23 / targetSdk=34）
+    package           : com.dokalike.dokalike_camera ✓
+    versionCode       : 1001 ✗
+    versionName       : 1.0.0 ✓
+    sdkVersion(minSdk): 23 ✓
+    targetSdkVersion  : 34 ✓
+    uses-permission:
+      - android.permission.ACCESS_NETWORK_STATE
+      - android.permission.CAMERA
+      - android.permission.INTERNET
+      - android.permission.READ_EXTERNAL_STORAGE
+      - android.permission.RECORD_AUDIO
+      - android.permission.WRITE_EXTERNAL_STORAGE
+      - com.dokalike.dokalike_camera.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+  包内条目数: 537
+  必需条目校验（路径以包内实际输出为准）：
+    ✓ TFLite 检测模型 ssd_mobilenet_v1_quant.tflite
+        实际路径: assets/flutter_assets/assets/models/ssd_mobilenet_v1_quant.tflite
+    ✓ 标签表 labels.txt
+        实际路径: assets/flutter_assets/assets/models/labels.txt
+    ✗ TFLite FFI 库 libtensorflowlite_c.so（armeabi-v7a） —— 包内缺失！
+    ✗ C++ 运行时 libc++_shared.so（armeabi-v7a） —— 包内缺失！
+    -- lib/armeabi-v7a 实际条目清单 --
+       lib/armeabi-v7a/libapp.so
+       lib/armeabi-v7a/libface_detector_v2_jni.so
+       lib/armeabi-v7a/libflutter.so
+       lib/armeabi-v7a/libimage_processing_util_jni.so
+       lib/armeabi-v7a/libsurface_util_jni.so
+       lib/armeabi-v7a/libtensorflowlite_gpu_jni.so
+       lib/armeabi-v7a/libtensorflowlite_jni.so
+  ==> app-armeabi-v7a-release.apk 未通过必需条目校验
+----------------------------------------
+>>> APK 3: app-x86_64-release.apk
+  大小: 50450774 bytes（48.1 MB）
+  ABI : x86_64
+  [badging] 参考项（期望 package=com.dokalike.dokalike_camera / versionCode=1 / versionName=1.0.0 / minSdk=23 / targetSdk=34）
+    package           : com.dokalike.dokalike_camera ✓
+    versionCode       : 4001 ✗
+    versionName       : 1.0.0 ✓
+    sdkVersion(minSdk): 23 ✓
+    targetSdkVersion  : 34 ✓
+    uses-permission:
+      - android.permission.ACCESS_NETWORK_STATE
+      - android.permission.CAMERA
+      - android.permission.INTERNET
+      - android.permission.READ_EXTERNAL_STORAGE
+      - android.permission.RECORD_AUDIO
+      - android.permission.WRITE_EXTERNAL_STORAGE
+      - com.dokalike.dokalike_camera.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+  包内条目数: 537
+  必需条目校验（路径以包内实际输出为准）：
+    ✓ TFLite 检测模型 ssd_mobilenet_v1_quant.tflite
+        实际路径: assets/flutter_assets/assets/models/ssd_mobilenet_v1_quant.tflite
+    ✓ 标签表 labels.txt
+        实际路径: assets/flutter_assets/assets/models/labels.txt
+    ✗ TFLite FFI 库 libtensorflowlite_c.so（x86_64） —— 包内缺失！
+    ✗ C++ 运行时 libc++_shared.so（x86_64） —— 包内缺失！
+    -- lib/x86_64 实际条目清单 --
+       lib/x86_64/libapp.so
+       lib/x86_64/libface_detector_v2_jni.so
+       lib/x86_64/libflutter.so
+       lib/x86_64/libimage_processing_util_jni.so
+       lib/x86_64/libsurface_util_jni.so
+       lib/x86_64/libtensorflowlite_gpu_jni.so
+       lib/x86_64/libtensorflowlite_jni.so
+  ==> app-x86_64-release.apk 未通过必需条目校验
+
+===== 自检汇总 =====
+APK 数量         : 3
+失败包数(硬门禁) : 3
+警告项(环境/上游): 0
+✗ APK 交付前自检未通过：3 个包缺少必需条目（见上方 ✗ 标记）

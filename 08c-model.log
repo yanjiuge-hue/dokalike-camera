@@ -1,0 +1,9 @@
+>>> 下载 COCO SSD MobileNet V1 量化模型
+  下载模型：https://storage.googleapis.com/download.tensorflow.org/models/tflite/coco_ssd_mobilenet_v1_1.0_quant_2018_06_29.zip
+  解压得到：detect.tflite（4183312 bytes）
+  ✓ 已就位：/home/runner/work/dokalike-camera/dokalike-camera/assets/models/ssd_mobilenet_v1_quant.tflite（4183312 bytes）
+>>> assets/models 现状
+total 4096
+-rw-r--r-- 1 runner runner    2054 Oct  8 00:50 README.md
+-rw-r--r-- 1 runner runner     753 Oct  8 00:50 labels.txt
+-rw-r----- 1 runner runner 4183312 Oct  8 00:52 ssd_mobilenet_v1_quant.tflite
