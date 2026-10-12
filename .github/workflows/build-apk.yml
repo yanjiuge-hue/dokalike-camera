@@ -492,6 +492,10 @@ jobs:
       #
       # 严重级别（重要，避免误判）：
       #   - 包内「必需条目」缺失            → 硬失败（交付门禁，必须暴露出来）
+      #       必需条目 = 模型 tflite + labels.txt + 该 ABI 下的
+      #       libtensorflowlite_jni.so（tflite_flutter 0.10+ 改了这个名字，
+      #       0.9.x 的 libtensorflowlite_c.so 早已不存在，别再拿它做断言）
+      #   - GPU delegate 库 / libc++_shared.so → 参考项，打 ✓ 或 ⚠，不阻断
       #   - aapt / aapt2 / unzip 工具缺失   → 环境问题，打印 ⚠ 后跳过该项校验，
       #                                        绝不把环境问题算到产物头上
       #   - 包名/版本/sdk 版本等元数据      → 参考项，打印 ✓/✗ 提示但不阻断
@@ -509,6 +513,19 @@ jobs:
           # 相等打印 ✓，不等打印 ✗（只影响日志可读性）
           mark() {
             if [ "$1" = "$2" ]; then echo "✓"; else echo "✗"; fi
+          }
+
+          # versionCode 专用比较：`flutter build apk --split-per-abi` 会按 ABI
+          # 注入 abiCode（armeabi-v7a=1 / arm64-v8a=2 / x86_64=4），最终产物里
+          # versionCode = abiCode*1000 + app/build.gradle 里的原始值。
+          # 也就是说 base=1 时三个包分别是 1001 / 2001 / 4001（run 37709840216
+          # 实测），拿 1 去硬比会永远 ✗，所以这里比对的是「去掉 ABI 码后的基值」。
+          mark_code() {
+            c="$1"
+            case "${c}" in
+              ''|*[!0-9]*) echo "✗"; return 0 ;;
+            esac
+            if [ $((c % 1000)) -eq 1 ]; then echo "✓"; else echo "✗"; fi
           }
 
           run_inspect() {
@@ -583,6 +600,24 @@ jobs:
               return 1
             }
 
+            # 参考项校验：命中打 ✓，未命中打 ⚠ 并计入警告数，**永远返回 0**。
+            # 用于「实际确实缺、但缺了也不影响 App 跑起来」的条目——把这类条目
+            # 做成硬门禁只会污染信号（见 run 37709840216 的误杀）。
+            # 同样依赖外部变量 entries。
+            hint_entry() {
+              desc="$1"
+              pattern="$2"
+              hit="$(printf '%s\n' "${entries}" | grep -E "${pattern}" | head -n 1 || true)"
+              if [ -n "${hit}" ]; then
+                echo "    ✓ ${desc}"
+                echo "        实际路径: ${hit}"
+              else
+                echo "    ⚠ ${desc} —— 包内未见（参考项，不阻断）"
+                warned=$((warned + 1))
+              fi
+              return 0
+            }
+
             count=0
             failed=0
             warned=0
@@ -597,7 +632,9 @@ jobs:
               # ---- 体积 ----
               bytes="$(stat -c '%s' "${apk}" 2>/dev/null || true)"
               if [ -z "${bytes}" ]; then bytes="$(wc -c < "${apk}" | tr -d ' ')"; fi
-              human="$(awk -v b="${bytes}" 'BEGIN { printf "%.1f MB", b / 1048576 }')"
+              # 两种单位都打印：基线文档里记的是十进制 MB，du/资源管理器里看到的
+              # 是 MiB，只写一个容易对不上账。
+              human="$(awk -v b="${bytes}" 'BEGIN { printf "%.1f MB / %.1f MiB", b / 1000000, b / 1048576 }')"
               echo "  大小: ${bytes} bytes（${human}）"
 
               # ---- ABI：从文件名 app-<abi>-release.apk 推断 ----
@@ -623,9 +660,9 @@ jobs:
                   p_vname="$(printf '%s' "${pkg_line}" | grep -o -m1 "versionName='[^']*'" | head -n 1 | sed "s/^versionName='//; s/'$//")"
                   p_sdk="$(printf '%s\n' "${badging}" | grep -m1 '^sdkVersion:' | sed -n "s/.*'\([^']*\)'.*/\1/p" || true)"
                   p_target="$(printf '%s\n' "${badging}" | grep -m1 '^targetSdkVersion:' | sed -n "s/.*'\([^']*\)'.*/\1/p" || true)"
-                  echo "  [badging] 参考项（期望 package=com.dokalike.dokalike_camera / versionCode=1 / versionName=1.0.0 / minSdk=23 / targetSdk=34）"
+                  echo "  [badging] 参考项（期望 package=com.dokalike.dokalike_camera / versionCode 基值=1，--split-per-abi 注入 abiCode 后实际为 1001/2001/4001 / versionName=1.0.0 / minSdk=23 / targetSdk=34）"
                   echo "    package           : ${p_name} $(mark "${p_name}" "com.dokalike.dokalike_camera")"
-                  echo "    versionCode       : ${p_code} $(mark "${p_code}" "1")"
+                  echo "    versionCode       : ${p_code} $(mark_code "${p_code}")"
                   echo "    versionName       : ${p_vname} $(mark "${p_vname}" "1.0.0")"
                   echo "    sdkVersion(minSdk): ${p_sdk} $(mark "${p_sdk}" "23")"
                   echo "    targetSdkVersion  : ${p_target} $(mark "${p_target}" "34")"
@@ -666,9 +703,25 @@ jobs:
                 echo "      （上游未分发该 ABI 的原生库，属上游/环境问题，不计为产物缺陷）"
                 warned=$((warned + 1))
               else
-                check_entry "TFLite FFI 库 libtensorflowlite_c.so（${abi}）" "^lib/${abi}/libtensorflowlite_c\.so$" || ok=0
-                # 注意 + 在 ERE 里是量词，必须转义，否则 libc++_shared 匹配不到
-                check_entry "C++ 运行时 libc++_shared.so（${abi}）" "^lib/${abi}/libc\+\+_shared\.so$" || ok=0
+                # ---- 硬门禁：Interpreter 运行时真正 dlopen 的那个库 ----
+                # tflite_flutter 0.10+ 不再自带 .so，改成依赖 maven 上的
+                # org.tensorflow:tensorflow-lite AAR；Dart 侧
+                # lib/src/bindings/bindings.dart 打开的是
+                #   DynamicLibrary.open('libtensorflowlite_jni.so')
+                # 而 libtensorflowlite_c.so 是 0.9.x 时代的老名字，0.11.0 的依赖
+                # 图里根本没有它——拿老名字做断言会 100% 误杀（run 37709840216）。
+                check_entry "TFLite 推理库 libtensorflowlite_jni.so（${abi}）" "^lib/${abi}/libtensorflowlite_jni\.so$" || ok=0
+
+                echo "    -- 参考项（缺失仅提示，不阻断）--"
+                # libtensorflowlite_gpu_jni.so：随 tensorflow-lite-gpu 依赖一起进来，
+                # 但本项目未使用 GpuDelegate / NnApiDelegate，缺了也不影响推理，
+                # 因此不作为门禁。
+                hint_entry "GPU delegate 库 libtensorflowlite_gpu_jni.so（${abi}）" "^lib/${abi}/libtensorflowlite_gpu_jni\.so$"
+                # libc++_shared.so：build.gradle 里有 pickFirst，但实测三个包都不含它
+                # （AGP 归并后并未打进产物，且上一轮绿基线的产物同样不含）。
+                # 这类「上游打包行为」按本步骤自己的分级原则应归为 ⚠ 而非 ✗。
+                # 注意 + 在 ERE 里是量词，必须转义，否则 libc++_shared 永远匹配不到。
+                hint_entry "C++ 运行时 libc++_shared.so（${abi}）" "^lib/${abi}/libc\+\+_shared\.so$"
                 echo "    -- lib/${abi} 实际条目清单 --"
                 printf '%s\n' "${abi_entries}" | sed 's/^/       /'
               fi

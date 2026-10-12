@@ -145,7 +145,12 @@ LUT 只是可选的精修资源：只有当你把 PNG 放进 `assets/luts/`
   - `ndk { abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64' }` 与
     `splits.abi`（控制单包体积）
   - R8 混淆 + `proguard-rules.pro` 保留 TFLite/MLKit 符号
-- FFI 库 `libtensorflowlite_c.so` 由插件自动随包分发，无需手动配置
+- FFI 库 `libtensorflowlite_jni.so` 由插件自动随包分发，无需手动配置。
+  ⚠️ 注意库名：tflite_flutter **0.10+** 起 Android 侧改为依赖 maven 上的
+  `org.tensorflow:tensorflow-lite` AAR，Dart 绑定打开的是
+  `libtensorflowlite_jni.so`；0.9.x 时代的 `libtensorflowlite_c.so`
+  **已经不存在**（排查包内缺库时别再找这个名字）。启用 GPU delegate 时
+  包内还会多一个 `libtensorflowlite_gpu_jni.so`
 
 ### iOS（已配置）
 

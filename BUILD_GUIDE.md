@@ -169,19 +169,37 @@ keytool -genkey -v -keystore dokalike.keystore -alias dokalike \
 这是「APK 交付前自检」步骤的输出。健康的结果应包含：
 
 - 三个 APK 各自的 **包名**（`com.dokalike.dokalike_camera`）、
-  **versionCode / versionName**（`1` / `1.0.0`）、**minSdk**（`23`）、
-  **targetSdk**（`34`）以及声明的 **uses-permission** 列表
+  **versionCode / versionName**、**minSdk**（`23`）、**targetSdk**（`34`）
+  以及声明的 **uses-permission** 列表
 - 每个包里的
   `✓ assets/flutter_assets/assets/models/ssd_mobilenet_v1_quant.tflite`
   与 `✓ assets/flutter_assets/assets/models/labels.txt`
-- arm64 包里的 `✓ lib/arm64-v8a/libtensorflowlite_c.so` 与
-  `✓ lib/arm64-v8a/libc++_shared.so`
-  （另两个包校验各自 ABI 目录下的同名库）
-- 三个 APK 的字节大小与 MB 数
+- 每个包里该 ABI 目录下的
+  `✓ lib/<abi>/libtensorflowlite_jni.so`
+  （arm64 即 `lib/arm64-v8a/libtensorflowlite_jni.so`，另两个包校验各自 ABI 目录）
+
+**关于 versionCode**：不要拿 `1` 去对。`flutter build apk --split-per-abi`
+会按 ABI 注入 `abiCode`，最终 `versionCode = abiCode * 1000 + 1`，实测为：
+
+| APK | versionCode |
+|---|---|
+| `app-armeabi-v7a-release.apk` | 1001 |
+| `app-arm64-v8a-release.apk` | 2001 |
+| `app-x86_64-release.apk` | 4001 |
+
+自检步骤比对的是「去掉 abiCode 后的基值」（`versionCode % 1000 == 1`），
+所以这三个值都会打 `✓`。
+
+- 三个 APK 的字节大小（同时给出 MB 与 MiB）
 
 任一项打 `✗` → 该步骤直接失败，说明产物缺件，装到手机上会降级或崩溃。
 （包名/版本/sdk 这几项是**参考项**，只打标记不阻断，避免 aapt 与 aapt2
 输出格式差异造成误判。）
+
+**打 `⚠` 的参考项不阻断**：`libtensorflowlite_gpu_jni.so`（GPU delegate，
+本项目未启用）与 `libc++_shared.so`（`build.gradle` 里有 `pickFirst` 但
+实测三个包都没有它，属上游打包行为）在日志里以 ⚠ 出现是**正常的**，
+只在「警告项(环境/上游)」里计数，不会进「失败包数(硬门禁)」。
 
 > 该文件由「导出日志到 ci-logs 分支」步骤按 `*.log` 通配收集，
 > 因此会自动出现在 `ci-logs` 分支与 `ci-logs` 制品里。
