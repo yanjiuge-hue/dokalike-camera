@@ -1,0 +1,141 @@
+%% ============ 1) 预览链路（新路径 · mood 风格）============
+sequenceDiagram
+    autonumber
+    actor U as 用户
+    participant FB as FilterBar
+    participant FN as FilterNotifier
+    participant CP as CameraPage
+    participant FC as FilterCatalog
+    participant FP as FilterPreset
+    participant MP as MoodFilterPreview
+    participant SP as MoodShaderProgram
+    participant PK as ShaderUniformPacker
+    participant TU as FilterTuning
+    participant GPU as GPU / Skia-Impeller
+
+    U->>FB: 点击「浮光跃金」
+    FB->>FN: setFilter('glinting_gold')
+    FN->>FN: state = FilterState(currentId, strength=1.0)
+    FN->>SettingsRepository: saveFilterSelection(id, strength)
+    FN-->>CP: notifyListeners (Riverpod)
+
+    CP->>FC: byId('glinting_gold')
+    FC-->>CP: FilterPreset(params=glintingGold)
+    CP->>FP: usesAdjustPath()
+    FP-->>CP: true
+
+    Note over CP: 旧路径分支：isOriginal 或 film 类<br/>→ 仍走 ColorFiltered(matrixAt(s))，代码不变
+
+    CP->>MP: MoodFilterPreview(preset, strength, child: CameraPreview)
+    MP->>FP: paramsAt(strength)
+    FP->>FP: AdjustParams.effective(s) → v_eff = v_norm × s
+    FP-->>MP: AdjustParamsNorm
+
+    alt PreviewStrategy.imageFilteredShader (T-A)
+        MP->>SP: shader(paramsNorm, w, h)
+        SP->>TU: radiusPx(usmRadiusBase, w, h) / radiusPx(defRadiusBase, w, h)
+        TU-->>SP: rUsm=1, rDef=16 (1080p)
+        SP->>PK: pack(paramsNorm, w, h, rUsm, rDef)
+        PK-->>SP: Float32List (4×vec4 布局)
+        SP->>SP: FragmentProgram.fragmentShader() + setFloat(0, uniforms)
+        SP-->>MP: ui.FragmentShader
+        MP->>GPU: ImageFiltered(imageFilter: ImageFilter.shader(fs), child: CameraPreview)
+        GPU-->>U: 屏幕显示调色后画面
+    else PreviewStrategy.imageStreamShader (T-B 兜底)
+        MP->>MP: startImageStream → YUV→RGB → ui.Image → ImageShader
+        MP->>GPU: CustomPaint 绘制
+        GPU-->>U: 屏幕显示（分辨率受 imageStream 限制）
+    else PreviewStrategy.matrixFallback (T-C 最后兜底)
+        MP->>GPU: ColorFiltered(ColorFilter.matrix(近似矩阵))
+        GPU-->>U: 屏幕显示（仅 6 参数 + 提示文案）
+    end
+
+
+%% ============ 2) 落盘链路（拍照 → 保存）============
+sequenceDiagram
+    autonumber
+    actor U as 用户
+    participant CN as CameraNotifier
+    participant CS as CameraService
+    participant FP as FilterPipeline
+    participant PR as FilterPreset
+    participant AP as AdjustPipeline
+    participant AM as AdjustMath
+    participant GM as GainMapBuilder
+    participant IS as Isolate(s)
+    participant BR as BeautyProcessor
+    participant REPO as PhotoRepository
+
+    U->>CN: 点击快门
+    CN->>CS: capture()
+    CS-->>CN: Uint8List jpeg (12MP)
+
+    CN->>FP: applyToBytes(jpeg, preset, strength)
+    FP->>PR: usesAdjustPath()
+
+    alt 旧路径（film / portrait / ... 或 moodPathEnabled=false）
+        FP->>IS: compute(_applyFilterJob, matrix)
+        IS-->>FP: Uint8List (矩阵逐像素 + JPEG q92)
+    else 新路径（mood）
+        FP->>PR: paramsAt(strength)
+        PR-->>FP: AdjustParamsNorm
+        FP->>AP: apply(jpeg, params, strength, Parallelism.auto)
+        AP->>IS: decodeJpg(jpeg) → Image.getBytes(ChannelOrder.rgba)
+        IS-->>AP: Uint8List rgba (48.8MB)
+
+        AP->>GM: downsampleLuminance(L_src → 长边 1080)   %% 标准尺度，单线程·设备无关
+        GM->>GM: buildSharpnessGain(rBase=1) + buildDefinitionGain(rBase=16)
+        GM-->>AP: Float32List gainMap @1080×810
+        AP->>AP: 按 Parallelism 决定条带数 N（自适应并行度，算子不变）
+        loop 每个条带 y0..y1（串行=1 片 / 并行=N 片）
+            AP->>IS: Isolate.run(applyStrip, AdjustStripJob)
+            IS->>IS: sRGB8 → [0,1] → linear (LUT)
+            IS->>AM: applyExposure(2^(kEv·ev))
+            IS->>AM: applyWhiteBalance(temp, tint)
+            IS->>IS: linear → sRGB (LUT)
+            IS->>AM: applyToneChain(brilliance → highlights/shadows → contrast → blackPoint → vibrance)
+            IS->>GM: applyGain(gainMap@1080 上采样回本条带)   %% 顺序固定，不可交换
+            IS->>IS: RGB *= gain → clamp → round → sRGB8
+            IS-->>AP: Uint8List strip
+        end
+        AP->>AP: 拼接条带
+        AP->>IS: encodeJpg(q92)
+        IS-->>AP: Uint8List
+        AP-->>FP: Uint8List
+    end
+
+    FP-->>CN: processed bytes
+
+    CN->>FP: applyBeauty(bytes, beautyLevel)
+    FP->>BR: BeautyProcessor.processBytes
+    BR-->>FP: bytes
+    FP-->>CN: bytes
+
+    CN->>REPO: save(bytes, PhotoMeta(filterId, filterStrength))
+    REPO->>REPO: LegacyIdMap.migrate(filterId)
+    REPO-->>CN: Photo
+    CN-->>U: 相册缩略图 + 保存完成
+
+
+%% ============ 3) 一致性验证（L1 Parity Probe）============
+sequenceDiagram
+    autonumber
+    participant PG as ParityProbePage (debug)
+    participant SP as MoodShaderProgram
+    participant GPU
+    participant AP as AdjustPipeline
+    participant AM as AdjustMath
+
+    PG->>PG: 构造 256×3 已知像素条（灰阶 + 饱和色 + 随机噪声）
+    PG->>SP: shader(paramsNorm, 256, 3)
+    SP->>GPU: 渲染到 256×3 层
+    PG->>GPU: RenderRepaintBoundary.toImage() → toByteData()
+    GPU-->>PG: Uint8List A (GPU 输出)
+
+    PG->>AP: applyToRgba(同一输入, 同一 paramsNorm)
+    AP->>AM: 逐像素调色链 + gain map
+    AM-->>AP: Uint8List B (CPU 输出)
+
+    PG->>PG: diff = |A[i] - B[i]|
+    PG->>PG: 报告 max / P95 / MAE
+    Note over PG: 通过判据：max ≤ 1/255<br/>失败 → 查 docs/shader_cpu_parity.md 定位漂移的算子

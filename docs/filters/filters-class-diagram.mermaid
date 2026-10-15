@@ -1,0 +1,266 @@
+classDiagram
+    class FilterPreset {
+        +String id
+        +String name
+        +List~double~ matrix4x5
+        +AdjustParams? params
+        +FilterCategory category
+        +bool isOriginal
+        +String? lutAsset  <<deprecated>>
+        +bool usesAdjustPath()
+        +List~double~ matrixAt(double s)
+        +AdjustParamsNorm paramsAt(double s)
+    }
+
+    class AdjustParams {
+        +int exposure
+        +int brilliance
+        +int highlights
+        +int shadows
+        +int contrast
+        +int blackPoint
+        +int vibrance
+        +int temperature
+        +int tint
+        +int sharpness
+        +int definition
+        +static AdjustParams neutral()
+        +AdjustParamsNorm effective(double strength)
+        +Map~String,int~ toJson()
+        +static AdjustParams fromJson(Map json)
+    }
+
+    class AdjustParamsNorm {
+        +double exposure
+        +double brilliance
+        +double highlights
+        +double shadows
+        +double contrast
+        +double blackPoint
+        +double vibrance
+        +double temperature
+        +double tint
+        +double sharpness
+        +double definition
+        +bool isNeutral()
+    }
+
+    class FilterCategory {
+        <<enum>>
+        original
+        portrait
+        film
+        landscape
+        night
+        food
+        mono
+        mood
+    }
+
+    class FilterTuning {
+        <<constants>>
+        +double kEv
+        +double kContrast
+        +double kTemperature
+        +double kTint
+        +double kBrilliance
+        +double kHighlightUp
+        +double kHighlightDown
+        +double kShadowUp
+        +double kShadowDown
+        +double kBlackPoint
+        +double kVibrance
+        +double hlSplit
+        +double hlSoftness
+        +int usmRadiusBase
+        +int defRadiusBase
+        +int standardScaleLongEdge
+        +int radiusPx(int rBase, int w, int h)
+    }
+
+    class ColorSpaceKit {
+        +static Float32List srgbToLinearLut
+        +static double srgbToLinear(double v01)
+        +static double linearToSrgb(double lin)
+        +static double luminance(double r, double g, double b)
+        +static Float32List buildLut()
+    }
+
+    class AdjustMath {
+        <<pure functions>>
+        +static void applyExposure(Float64List rgb, double ev)
+        +static void applyWhiteBalance(Float64List rgb, double temp, double tint)
+        +static double applyBrilliance(double l, double b)
+        +static double applyHighlightsShadows(double l, double hl, double sh)
+        +static void applyContrast(Float64List rgb, double c)
+        +static void applyBlackPoint(Float64List rgb, double bp)
+        +static void applyVibrance(Float64List rgb, double v)
+        +static void applyToneChain(Float64List rgb, AdjustParamsNorm p)
+    }
+
+    class SpatialKernel {
+        <<shared spec>>
+        +static List~int~ usmSeparableKernel()
+        +static List~double~ usmKernel2D(int rPx)
+        +static List~Offset~ definitionRings(int rPx)
+        +static int tapCountDefinition()
+    }
+
+    class GainMapBuilder {
+        <<standard scale, device independent>>
+        +static Float32List downsampleLuminance(Uint8List rgba, int w, int h, int targetLongEdge)
+        +static Float32List buildSharpnessGain(Float32List lumStd, int wStd, int hStd, double amount, int rBase)
+        +static Float32List buildDefinitionGain(Float32List lumStd, int wStd, int hStd, double amount, int rBase)
+        +static void applyGain(Uint8List rgba, Float32List gainStd, int w, int h, int y0, int y1)
+    }
+
+    class AdjustStripJob {
+        +Uint8List rgba
+        +int width
+        +int height
+        +int y0
+        +int y1
+        +AdjustParamsNorm params
+        +Float32List gainMapStd
+    }
+
+    class AdjustPipeline {
+        +Future~Uint8List~ apply(Uint8List jpeg, AdjustParams p, double strength, Parallelism mode)
+        +static Uint8List applyStrip(AdjustStripJob job)
+        +static Uint8List applyToRgba(Uint8List rgba, int w, int h, AdjustParamsNorm p)
+    }
+
+    class Parallelism {
+        <<enum>>
+        serial
+        auto
+        fixed
+    }
+
+    class MoodShaderProgram {
+        -ui.FragmentProgram? _program
+        +bool available
+        +String? loadError
+        +Future~void~ load()
+        +ui.FragmentShader? shader(AdjustParamsNorm p, double w, double h)
+    }
+
+    class ShaderUniformPacker {
+        <<layout constants>>
+        +static int slotCount
+        +static int paramSlotBase
+        +static int tuningSlotBase
+        +static Float32List pack(AdjustParamsNorm p, double w, double h, int rUsm, int rDef)
+    }
+
+    class PreviewStrategy {
+        <<enum>>
+        imageFilteredShader
+        imageStreamShader
+        matrixFallback
+    }
+
+    class MoodFilterPreview {
+        <<StatelessWidget>>
+        +FilterPreset preset
+        +double strength
+        +Widget child
+        +Widget build(BuildContext ctx)
+    }
+
+    class FilterCatalog {
+        +static List~FilterPreset~ all
+        +static List~FilterPreset~ moodPresets
+        +static List~FilterPreset~ classicPresets
+        +static FilterPreset byId(String id)
+        -static Map~String,String~ legacyIdAliases
+    }
+
+    class MoodPresets {
+        <<data>>
+        +static FilterPreset glintingGold
+        +static FilterPreset frostBlue
+        +static FilterPreset sunnyField
+        +static FilterPreset verdantGreen
+        +static FilterPreset tyndall
+        +static FilterPreset gardenCinema
+    }
+
+    class LegacyFilterIds {
+        <<hashed, no trademark strings>>
+        +static int fnv1a(String s)
+        +static const int hashSoftTone
+        +static const int hashGreenField
+        +static const int hashGoldenShore
+        +static FilterPreset? lookup(String storedId)
+    }
+
+    class TrademarkHashSet {
+        <<hashed, for compliance test>>
+        +static bool containsToken(String idOrName)
+        -static const Set~int~ hashes
+    }
+
+    class ConsistencyHarnessPage {
+        <<debug Widget, for 9.1-A>>
+        +Future~void~ renderPreviewPath(String staticImage)
+        +Future~void~ runExportPath(String staticImage)
+        +Future~void~ exportPairForQa()
+    }
+
+    class FilterPipeline {
+        +Future~Uint8List~ applyToBytes(Uint8List jpeg, FilterPreset preset, double strength)
+        +Future~Uint8List~ applyBeauty(Uint8List jpeg, BeautyLevel level)
+    }
+
+    class ColorMatrixKit {
+        <<unchanged>>
+        +static List~double~ identity()
+        +static List~double~ lerp(a,b,t)
+        +static Rgba apply(m, pixel)
+    }
+
+    class ParityProbePage {
+        <<debug Widget>>
+        +List~int~ runProbe(AdjustParams p)
+    }
+
+    FilterPreset "1" *-- "0..1" AdjustParams : params (可选)
+    FilterPreset --> FilterCategory : category
+    AdjustParams ..> AdjustParamsNorm : effective(strength)
+    FilterPreset ..> AdjustParamsNorm : paramsAt(s)
+    FilterPreset ..> ColorMatrixKit : matrixAt(s)
+
+    AdjustMath ..> AdjustParamsNorm : 消费
+    AdjustMath ..> ColorSpaceKit : 依赖
+    AdjustMath ..> FilterTuning : 标定常数
+
+    GainMapBuilder ..> SpatialKernel : 采样规格
+    GainMapBuilder ..> ColorSpaceKit : 亮度
+    AdjustPipeline *-- AdjustStripJob
+    AdjustPipeline ..> AdjustMath : 调色链
+    AdjustPipeline ..> GainMapBuilder : gain map
+    AdjustPipeline --> Parallelism
+    AdjustPipeline ..> FilterTuning
+
+    FilterPipeline ..> FilterPreset : 路径分派
+    FilterPipeline ..> AdjustPipeline : 新路径
+    FilterPipeline ..> ColorMatrixKit : 旧路径(不变)
+
+    MoodFilterPreview ..> MoodShaderProgram
+    MoodFilterPreview --> PreviewStrategy
+    MoodFilterPreview ..> FilterPreset
+    MoodShaderProgram ..> ShaderUniformPacker
+    ShaderUniformPacker ..> AdjustParamsNorm
+    ShaderUniformPacker ..> FilterTuning
+
+    FilterCatalog o-- FilterPreset
+    FilterCatalog ..> MoodPresets
+    FilterCatalog ..> LegacyFilterIds
+    MoodPresets ..> AdjustParams : 7 套参数表
+    TrademarkHashSet ..> FilterPreset : 合规自检
+
+    ParityProbePage ..> MoodShaderProgram : GPU 输出
+    ParityProbePage ..> AdjustPipeline : CPU 输出
+    ConsistencyHarnessPage ..> MoodFilterPreview : 真实预览路径
+    ConsistencyHarnessPage ..> AdjustPipeline : 真实落盘路径
